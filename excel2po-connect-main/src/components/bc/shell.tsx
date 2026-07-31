@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-11 items-center justify-between border-b border-border bg-card px-4">
           <span className="text-[13px] font-semibold text-heading">
-            Operations · Paltrack Transmission
+            Operations · Paltrack Transmissions
           </span>
           <span className="text-[12px] text-muted-foreground">Internal utility</span>
         </header>
