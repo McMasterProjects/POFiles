@@ -555,7 +555,6 @@ describe("PO generation", () => {
             reason: "REAS",
             shift: "D",
             shiftDate: "20260115",
-            orderNo: "ORD001",
             store: "ST",
             stockPool: "CE",
             shippedDate: "20260115",
