@@ -7,9 +7,15 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Conversion Dashboard | Excel to PO Converter" },
-      { name: "description", content: "Daily conversion counts, failures and recent Paltrack PO activity." },
+      {
+        name: "description",
+        content: "Daily conversion counts, failures and recent Paltrack PO activity.",
+      },
       { property: "og:title", content: "Conversion Dashboard" },
-      { property: "og:description", content: "Daily conversion counts, failures and recent Paltrack PO activity." },
+      {
+        property: "og:description",
+        content: "Daily conversion counts, failures and recent Paltrack PO activity.",
+      },
     ],
   }),
   component: Dashboard,
@@ -26,12 +32,18 @@ function Dashboard() {
 
   return (
     <AppShell>
-      <PageTitle title="Dashboard" subtitle={`Backend ${health?.status ?? "…"} · v${health?.version ?? "-"}`} />
+      <PageTitle
+        title="Dashboard"
+        subtitle={`Backend ${health?.status ?? "…"} · v${health?.version ?? "-"}`}
+      />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <Tile label="Conversions today" value={todays.length} />
         <Tile label="Successful" value={ok.length} />
         <Tile label="Failed" value={failed.length} />
-        <Tile label="Awaiting validation" value={data.filter((c) => c.status === "Validation Failed").length} />
+        <Tile
+          label="Awaiting validation"
+          value={data.filter((c) => c.status === "Validation Failed").length}
+        />
         <Tile label="Pallet records" value={data.reduce((s, c) => s + c.palletCount, 0)} />
       </div>
 
@@ -57,7 +69,10 @@ function Dashboard() {
                 <td className="px-2 py-1">{c.sourceFileName}</td>
                 <td className="px-2 py-1">{c.outputFileName}</td>
                 <td className="px-2 py-1">
-                  <StatusIndicator kind={c.status === "Completed" ? "valid" : "error"} label={c.status} />
+                  <StatusIndicator
+                    kind={c.status === "Completed" ? "valid" : "error"}
+                    label={c.status}
+                  />
                 </td>
                 <td className="px-2 py-1">{c.palletCount}</td>
                 <td className="px-2 py-1">{c.cartonCount}</td>

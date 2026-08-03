@@ -121,7 +121,10 @@ export const listMappingProfilesFn = createServerFn({ method: "GET" }).handler(a
 export const saveMappingProfileFn = createServerFn({ method: "POST" })
   .inputValidator((data: { name: string; mapping: Record<string, string | undefined> }) =>
     z
-      .object({ name: z.string().min(1).max(60), mapping: z.record(z.string(), z.string().optional()) })
+      .object({
+        name: z.string().min(1).max(60),
+        mapping: z.record(z.string(), z.string().optional()),
+      })
       .parse(data),
   )
   .handler(async ({ data }) => {

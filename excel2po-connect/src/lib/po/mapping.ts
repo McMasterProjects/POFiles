@@ -1,4 +1,9 @@
-import { PALLET_FIELDS, type ColumnMapping, type PalletFieldKey, type POHeaderInput } from "./types";
+import {
+  PALLET_FIELDS,
+  type ColumnMapping,
+  type PalletFieldKey,
+  type POHeaderInput,
+} from "./types";
 
 /** Heuristic auto-mapping of Excel headers onto PO pallet fields. */
 const SYNONYMS: Record<PalletFieldKey, string[]> = {
@@ -68,9 +73,23 @@ const SYNONYMS: Record<PalletFieldKey, string[]> = {
   country: ["country", "country of origin", "origin"],
   targetCountry: ["target country", "destination country", "target_country"],
   farm: ["farm", "farm code", "puc", "production unit"],
-  packhouseCode: ["phc", "packhouse", "packhouse code", "packh code", "packh_code", "pack house code"],
+  packhouseCode: [
+    "phc",
+    "packhouse",
+    "packhouse code",
+    "packh code",
+    "packh_code",
+    "pack house code",
+  ],
   orchard: ["orchard", "orchard code", "block"],
-  inspectionDate: ["inspection date", "insp date", "inspec date", "inspec_date", "orig inspec date", "orig_inspec_date"],
+  inspectionDate: [
+    "inspection date",
+    "insp date",
+    "inspec date",
+    "inspec_date",
+    "orig inspec date",
+    "orig_inspec_date",
+  ],
   inspectionPoint: ["inspection point", "insp point", "inspect pnt", "inspect_pnt"],
   inspector: ["inspector", "inspector code"],
   originalIntakeDate: [
@@ -147,10 +166,20 @@ const SYNONYMS: Record<PalletFieldKey, string[]> = {
   weighingDateTime: ["weighing date time", "weighing datetime", "weighing_date_time"],
   mainArea: ["main area", "main_area"],
   actualGrade: ["actual_grade", "actual grade"],
-  samsaAccreditation: ["samsa accreditation", "samsa accredit pallet", "samsaaccredit pallet", "samsaaccredit"],
+  samsaAccreditation: [
+    "samsa accreditation",
+    "samsa accredit pallet",
+    "samsaaccredit pallet",
+    "samsaaccredit",
+  ],
 };
 
-const norm = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+const norm = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export function suggestMapping(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {};
@@ -158,15 +187,17 @@ export function suggestMapping(headers: string[]): ColumnMapping {
 
   for (const field of PALLET_FIELDS) {
     const candidates = SYNONYMS[field.key] ?? [];
-    const match = headers.find((h) => {
-      if (used.has(h)) return false;
-      const n = norm(h);
-      return candidates.some((c) => n === norm(c));
-    }) ?? headers.find((h) => {
-      if (used.has(h)) return false;
-      const n = norm(h);
-      return candidates.some((c) => n.includes(norm(c)));
-    });
+    const match =
+      headers.find((h) => {
+        if (used.has(h)) return false;
+        const n = norm(h);
+        return candidates.some((c) => n === norm(c));
+      }) ??
+      headers.find((h) => {
+        if (used.has(h)) return false;
+        const n = norm(h);
+        return candidates.some((c) => n.includes(norm(c)));
+      });
 
     if (match) {
       mapping[field.key] = match;
@@ -182,12 +213,23 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
 
 export function suggestHeaderValues(headers: string[], previewRows: Record<string, string>[]) {
   const suggested: Partial<POHeaderInput> = {};
-  const norm = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
-  const preferredRow = previewRows.find((row) => Object.values(row).some((v) => v.trim().length > 0));
+  const norm = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const preferredRow = previewRows.find((row) =>
+    Object.values(row).some((v) => v.trim().length > 0),
+  );
 
   for (const field of Object.keys(HEADER_SYNONYMS) as Array<keyof POHeaderInput>) {
     const candidates = HEADER_SYNONYMS[field] ?? [];
-    const match = headers.find((h) => candidates.some((c) => norm(h) === norm(c))) ?? headers.find((h) => candidates.some((c) => norm(h).includes(norm(c)) || norm(c).includes(norm(h))));
+    const match =
+      headers.find((h) => candidates.some((c) => norm(h) === norm(c))) ??
+      headers.find((h) =>
+        candidates.some((c) => norm(h).includes(norm(c)) || norm(c).includes(norm(h))),
+      );
     if (match && preferredRow) {
       const value = String(preferredRow[match] ?? "").trim();
       if (value) suggested[field] = value;

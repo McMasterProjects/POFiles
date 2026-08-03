@@ -44,7 +44,13 @@ export function parseExcelDate(value: unknown): Date | null {
 function makeUTC(y: number, mo: number, d: number, hh = 0, mm = 0): Date | null {
   if (mo < 1 || mo > 12 || d < 1 || d > 31 || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
   const date = new Date(Date.UTC(y, mo - 1, d, hh, mm));
-  if (date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d || date.getUTCHours() !== hh || date.getUTCMinutes() !== mm) return null;
+  if (
+    date.getUTCMonth() !== mo - 1 ||
+    date.getUTCDate() !== d ||
+    date.getUTCHours() !== hh ||
+    date.getUTCMinutes() !== mm
+  )
+    return null;
   return date;
 }
 
@@ -100,11 +106,7 @@ export function formatInteger(value: unknown, width: number): string {
 }
 
 /** Zero padded decimal with fixed decimals, e.g. 1409 -> "001409.000" */
-export function formatDecimal(
-  value: unknown,
-  width: number,
-  decimals: number,
-): string {
+export function formatDecimal(value: unknown, width: number, decimals: number): string {
   const n = toNumber(value) ?? 0;
   const sign = n < 0 ? "-" : "";
   const absText = Math.abs(n).toFixed(decimals);

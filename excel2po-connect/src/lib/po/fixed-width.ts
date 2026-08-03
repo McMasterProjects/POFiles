@@ -111,8 +111,7 @@ export function setFixedWidthField(
       ? raw.padStart(width, raw === "" ? " " : padChar)
       : raw.padEnd(width, padChar);
 
-  const next =
-    buffer.slice(0, fromPosition - 1) + padded + buffer.slice(toPosition);
+  const next = buffer.slice(0, fromPosition - 1) + padded + buffer.slice(toPosition);
 
   if (next.length !== buffer.length) {
     throw new Error(
@@ -152,12 +151,7 @@ export class RecordWriter {
     return this;
   }
 
-  num(
-    from: number,
-    to: number,
-    value: unknown,
-    options: Omit<FieldOptions, "align"> = {},
-  ): this {
+  num(from: number, to: number, value: unknown, options: Omit<FieldOptions, "align"> = {}): this {
     return this.put(from, to, value, { ...options, align: "numeric" });
   }
 

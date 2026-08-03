@@ -7,9 +7,16 @@ export const Route = createFileRoute("/validation-errors")({
   head: () => ({
     meta: [
       { title: "Validation Errors | Excel to PO Converter" },
-      { name: "description", content: "All PO validation failures with Excel row, record type, field and character positions." },
+      {
+        name: "description",
+        content:
+          "All PO validation failures with Excel row, record type, field and character positions.",
+      },
       { property: "og:title", content: "Validation Errors" },
-      { property: "og:description", content: "PO validation failures with Excel row, field and character positions." },
+      {
+        property: "og:description",
+        content: "PO validation failures with Excel row, field and character positions.",
+      },
     ],
   }),
   component: ValidationErrors,
@@ -28,8 +35,20 @@ function ValidationErrors() {
         <table className="w-full border-collapse text-[12px]">
           <thead className="bg-secondary text-left">
             <tr>
-              {["Severity", "Conversion", "Excel Row", "Record", "Field", "Code", "Positions", "Value", "Message"].map((h) => (
-                <th key={h} className="border-r border-border px-2 py-1 whitespace-nowrap">{h}</th>
+              {[
+                "Severity",
+                "Conversion",
+                "Excel Row",
+                "Record",
+                "Field",
+                "Code",
+                "Positions",
+                "Value",
+                "Message",
+              ].map((h) => (
+                <th key={h} className="border-r border-border px-2 py-1 whitespace-nowrap">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -37,7 +56,10 @@ function ValidationErrors() {
             {rows.map((r, i) => (
               <tr key={i} className="border-t border-border">
                 <td className="border-r border-border px-2 py-1">
-                  <StatusIndicator kind={r.severity === "error" ? "error" : "warning"} label={r.severity} />
+                  <StatusIndicator
+                    kind={r.severity === "error" ? "error" : "warning"}
+                    label={r.severity}
+                  />
                 </td>
                 <td className="border-r border-border px-2 py-1">{r.conversionId}</td>
                 <td className="border-r border-border px-2 py-1">{r.excelRow ?? "—"}</td>
@@ -52,7 +74,11 @@ function ValidationErrors() {
               </tr>
             ))}
             {!rows.length ? (
-              <tr><td className="px-2 py-2 text-muted-foreground" colSpan={9}>No validation issues recorded.</td></tr>
+              <tr>
+                <td className="px-2 py-2 text-muted-foreground" colSpan={9}>
+                  No validation issues recorded.
+                </td>
+              </tr>
             ) : null}
           </tbody>
         </table>

@@ -186,7 +186,9 @@ export function buildValidationReport(id: string) {
     `Rows: ${c.totalRows} (valid ${c.validRows}, invalid ${c.invalidRows})`,
     `Records: ${c.recordCount}  Pallets: ${c.palletCount}  Cartons: ${c.cartonCount}`,
     "",
-    ["SEVERITY", "EXCEL ROW", "RECORD", "FIELD", "CODE", "POSITIONS", "VALUE", "MESSAGE"].join("\t"),
+    ["SEVERITY", "EXCEL ROW", "RECORD", "FIELD", "CODE", "POSITIONS", "VALUE", "MESSAGE"].join(
+      "\t",
+    ),
     ...c.errors.map(line),
     ...c.warnings.map(line),
   ];

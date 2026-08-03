@@ -80,17 +80,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      { name: "description", content: "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download." },
+      {
+        name: "description",
+        content:
+          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      { property: "og:description", content: "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download." },
+      {
+        property: "og:description",
+        content:
+          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      { name: "twitter:description", content: "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6931f8bf-181d-45ac-b0a1-e92a9feeadae/id-preview-e3353f7d--1ac2a44e-d75f-4c21-bc6c-5e2834e72f55.lovable.app-1785404237519.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6931f8bf-181d-45ac-b0a1-e92a9feeadae/id-preview-e3353f7d--1ac2a44e-d75f-4c21-bc6c-5e2834e72f55.lovable.app-1785404237519.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6931f8bf-181d-45ac-b0a1-e92a9feeadae/id-preview-e3353f7d--1ac2a44e-d75f-4c21-bc6c-5e2834e72f55.lovable.app-1785404237519.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6931f8bf-181d-45ac-b0a1-e92a9feeadae/id-preview-e3353f7d--1ac2a44e-d75f-4c21-bc6c-5e2834e72f55.lovable.app-1785404237519.png",
+      },
     ],
     links: [
       {

@@ -25,51 +25,42 @@ export function joinWithCRLF(lines: string[]): string {
   return lines.join(CRLF) + CRLF;
 }
 
-export function getNextSequenceNumber(
-  header: POHeaderInput,
-  previousCount = 0,
-): string {
+export function getNextSequenceNumber(header: POHeaderInput, previousCount = 0): string {
   if (header.fileName?.trim()) {
     return String(header.sequenceNumber ?? "")
       .trim()
-      .padStart(4, "0");
+      .padStart(3, "0");
   }
 
   const baseSequence =
-    String(header.sequenceNumber ?? "").trim() ||
-    String(header.batchNumber ?? "").trim() ||
-    "1";
+    String(header.sequenceNumber ?? "").trim() || String(header.batchNumber ?? "").trim() || "1";
 
   const parsed = Number.parseInt(baseSequence, 10);
-  const next = Number.isNaN(parsed)
-    ? 1
-    : parsed + previousCount;
+  const next = Number.isNaN(parsed) ? 1 : parsed + previousCount;
 
-  return String(next).padStart(4, "0");
+  return String(next).padStart(3, "0");
 }
 
-export function buildFileName(
-  header: POHeaderInput,
-  sequenceOverride?: string,
-): string {
+export function buildFileName(header: POHeaderInput, sequenceOverride?: string): string {
   if (header.fileName?.trim()) {
     return header.fileName.trim();
   }
 
-  const seq = (
-    sequenceOverride ??
-    getNextSequenceNumber(header)
-  ).padStart(4, "0");
+  const seq = (sequenceOverride ?? getNextSequenceNumber(header)).padStart(3, "0");
 
-  const prefix = "POMTS";
+  const prefix = "PO";
 
-  const destination = String(
-    header.destinationAddress || "000",
-  )
+  const source = String(header.sourceAddress || "000")
     .trim()
-    .padStart(3, "0");
+    .slice(0, 3)
+    .padEnd(3, "0");
 
-  return `${prefix}${seq}.${destination}`;
+  const destination = String(header.destinationAddress || "000")
+    .trim()
+    .slice(0, 3)
+    .padEnd(3, "0");
+
+  return `${prefix}${source}${seq}.${destination}`;
 }
 
 /**
@@ -80,27 +71,13 @@ export function buildFileName(
  *
  * Every number from 1 to the row count is included once.
  */
-export function createRandomSequenceNumbers(
-  count: number,
-): number[] {
-  const sequenceNumbers = Array.from(
-    { length: count },
-    (_, index) => index + 1,
-  );
+export function createRandomSequenceNumbers(count: number): number[] {
+  const sequenceNumbers = Array.from({ length: count }, (_, index) => index + 1);
 
-  for (
-    let currentIndex = sequenceNumbers.length - 1;
-    currentIndex > 0;
-    currentIndex--
-  ) {
-    const randomIndex = Math.floor(
-      Math.random() * (currentIndex + 1),
-    );
+  for (let currentIndex = sequenceNumbers.length - 1; currentIndex > 0; currentIndex--) {
+    const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
 
-    [
-      sequenceNumbers[currentIndex],
-      sequenceNumbers[randomIndex],
-    ] = [
+    [sequenceNumbers[currentIndex], sequenceNumbers[randomIndex]] = [
       sequenceNumbers[randomIndex],
       sequenceNumbers[currentIndex],
     ];
@@ -116,17 +93,10 @@ export function createRandomSequenceNumbers(
  * If the SSCC is blank, the pallet ID is used.
  * If both are blank, the row is treated as unique.
  */
-function getBarcodeKey(
-  row: PalletRow,
-  index: number,
-): string {
-  const sscc = String(
-    row.values.sscc ?? "",
-  ).trim();
+function getBarcodeKey(row: PalletRow, index: number): string {
+  const sscc = String(row.values.sscc ?? "").trim();
 
-  const palletId = String(
-    row.values.palletId ?? "",
-  ).trim();
+  const palletId = String(row.values.palletId ?? "").trim();
 
   return sscc || palletId || `__row__${index}`;
 }
@@ -139,29 +109,18 @@ function getBarcodeKey(
  *
  * Unique barcodes always receive sequence 1.
  */
-export function assignRandomSequenceNumbers(
-  rows: PalletRow[],
-): number[] {
-  const barcodeGroups = new Map<
-    string,
-    number[]
-  >();
+export function assignRandomSequenceNumbers(rows: PalletRow[]): number[] {
+  const barcodeGroups = new Map<string, number[]>();
 
   rows.forEach((row, index) => {
     const barcodeKey = getBarcodeKey(row, index);
-    const existingIndexes =
-      barcodeGroups.get(barcodeKey) ?? [];
+    const existingIndexes = barcodeGroups.get(barcodeKey) ?? [];
 
     existingIndexes.push(index);
-    barcodeGroups.set(
-      barcodeKey,
-      existingIndexes,
-    );
+    barcodeGroups.set(barcodeKey, existingIndexes);
   });
 
-  const rowSequences = new Array<number>(
-    rows.length,
-  ).fill(1);
+  const rowSequences = new Array<number>(rows.length).fill(1);
 
   for (const rowIndexes of barcodeGroups.values()) {
     if (rowIndexes.length === 1) {
@@ -169,17 +128,11 @@ export function assignRandomSequenceNumbers(
       continue;
     }
 
-    const randomizedSequences =
-      createRandomSequenceNumbers(
-        rowIndexes.length,
-      );
+    const randomizedSequences = createRandomSequenceNumbers(rowIndexes.length);
 
-    rowIndexes.forEach(
-      (rowIndex, groupIndex) => {
-        rowSequences[rowIndex] =
-          randomizedSequences[groupIndex];
-      },
-    );
+    rowIndexes.forEach((rowIndex, groupIndex) => {
+      rowSequences[rowIndex] = randomizedSequences[groupIndex];
+    });
   }
 
   return rowSequences;
@@ -191,11 +144,7 @@ export function generatePOFile(input: {
   rows: PalletRow[];
   treatWarningsAsErrors?: boolean;
 }): GenerationResult {
-  const {
-    conversionId,
-    header,
-    rows,
-  } = input;
+  const { conversionId, header, rows } = input;
 
   const logs: LogEntry[] = [];
 
@@ -220,12 +169,7 @@ export function generatePOFile(input: {
 
   const ctx = makeContext(header);
 
-  const cartonCount = rows.reduce(
-    (sum, row) =>
-      sum +
-      (toNumber(row.values.cartons) ?? 0),
-    0,
-  );
+  const cartonCount = rows.reduce((sum, row) => sum + (toNumber(row.values.cartons) ?? 0), 0);
 
   const palletCount = rows.length;
   const records: BuiltRecord[] = [];
@@ -239,52 +183,31 @@ export function generatePOFile(input: {
    * Example:
    * 1, 3, 5, 2, 4
    */
-  const rowSequences =
-    assignRandomSequenceNumbers(rows);
+  const rowSequences = assignRandomSequenceNumbers(rows);
 
   records.push(buildBHRecord(ctx));
   log("BH generated");
 
-  records.push(
-    buildOHRecord(ctx, palletCount, Math.round(cartonCount)),
-  );
+  records.push(buildOHRecord(ctx, palletCount, Math.round(cartonCount)));
   log("OH generated");
 
   records.push(buildOLRecord(ctx));
   log("OL generated");
 
-  const includeOK = Boolean(
-    ctx.header.containerNumber?.trim() ||
-    ctx.header.sealNumber?.trim(),
-  );
+  const includeOK = Boolean(ctx.header.containerNumber?.trim() || ctx.header.sealNumber?.trim());
 
   if (includeOK) {
-    records.push(
-      buildOKRecord(ctx, palletCount),
-    );
+    records.push(buildOKRecord(ctx, palletCount));
     log("OK generated");
   }
 
-  records.push(
-    buildOCRecord(
-      ctx,
-      palletCount,
-      Math.round(cartonCount),
-    ),
-  );
+  records.push(buildOCRecord(ctx, palletCount, Math.round(cartonCount)));
   log("OC generated");
 
   rows.forEach((row, index) => {
-    const sequenceNumber =
-      rowSequences[index] ?? 1;
+    const sequenceNumber = rowSequences[index] ?? 1;
 
-    records.push(
-      buildOPRecord(
-        ctx,
-        row,
-        sequenceNumber,
-      ),
-    );
+    records.push(buildOPRecord(ctx, row, sequenceNumber));
   });
 
   log("OP records generated", {
@@ -314,57 +237,38 @@ export function generatePOFile(input: {
     message: `record count ${recordCount}`,
   });
 
-  const recordLengths = records.map(
-    (record) => ({
-      recordType: record.recordType,
-      length: record.line.length,
-      expected:
-        RECORD_LENGTHS[record.recordType],
-      ok:
-        record.line.length ===
-        RECORD_LENGTHS[record.recordType],
-    }),
-  );
+  const recordLengths = records.map((record) => ({
+    recordType: record.recordType,
+    length: record.line.length,
+    expected: RECORD_LENGTHS[record.recordType],
+    ok: record.line.length === RECORD_LENGTHS[record.recordType],
+  }));
 
   log("Record lengths validated");
 
-  const issues: ValidationIssue[] =
-    records.flatMap(
-      (record) => record.errors,
-    );
+  const issues: ValidationIssue[] = records.flatMap((record) => record.errors);
 
-  recordLengths.forEach(
-    (recordLength, index) => {
-      if (!recordLength.ok) {
-        issues.push({
-          code: "INVALID_RECORD_LENGTH",
-          severity: "error",
-          message:
-            `${recordLength.recordType} record ` +
-            `must be exactly ` +
-            `${recordLength.expected} characters.`,
-          recordType:
-            recordLength.recordType,
-          excelRow:
-            records[index].excelRow,
-          expectedLength:
-            recordLength.expected,
-          actualLength:
-            recordLength.length,
-        });
-      }
-    },
-  );
+  recordLengths.forEach((recordLength, index) => {
+    if (!recordLength.ok) {
+      issues.push({
+        code: "INVALID_RECORD_LENGTH",
+        severity: "error",
+        message:
+          `${recordLength.recordType} record ` +
+          `must be exactly ` +
+          `${recordLength.expected} characters.`,
+        recordType: recordLength.recordType,
+        excelRow: records[index].excelRow,
+        expectedLength: recordLength.expected,
+        actualLength: recordLength.length,
+      });
+    }
+  });
 
-  const btCartons =
-    Math.round(cartonCount);
+  const btCartons = Math.round(cartonCount);
 
   const opCartons = rows.reduce(
-    (sum, row) =>
-      sum +
-      Math.round(
-        toNumber(row.values.cartons) ?? 0,
-      ),
+    (sum, row) => sum + Math.round(toNumber(row.values.cartons) ?? 0),
     0,
   );
 
@@ -372,36 +276,24 @@ export function generatePOFile(input: {
     issues.push({
       code: "TOTALS_DO_NOT_BALANCE",
       severity: "error",
-      message:
-        `Carton totals do not agree ` +
-        `(OP ${opCartons} vs BT ${btCartons}).`,
+      message: `Carton totals do not agree ` + `(OP ${opCartons} vs BT ${btCartons}).`,
       recordType: "BT",
     });
   }
 
   log("Totals validated", {
-    message:
-      `${opCartons} cartons, ` +
-      `${palletCount} pallets`,
+    message: `${opCartons} cartons, ` + `${palletCount} pallets`,
   });
 
   const errors = issues.filter(
     (issue) =>
       issue.severity === "error" ||
-      Boolean(
-        input.treatWarningsAsErrors &&
-          issue.severity === "warning",
-      ),
+      Boolean(input.treatWarningsAsErrors && issue.severity === "warning"),
   );
 
-  const warnings = issues.filter(
-    (issue) =>
-      issue.severity === "warning",
-  );
+  const warnings = issues.filter((issue) => issue.severity === "warning");
 
-  const content = joinWithCRLF(
-    records.map((record) => record.line),
-  );
+  const content = joinWithCRLF(records.map((record) => record.line));
 
   const fileName = buildFileName(header);
 
@@ -411,10 +303,7 @@ export function generatePOFile(input: {
 
   return {
     conversionId,
-    status:
-      errors.length > 0
-        ? "Validation Failed"
-        : "Completed",
+    status: errors.length > 0 ? "Validation Failed" : "Completed",
     fileName,
     content,
     recordCount,

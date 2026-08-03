@@ -29,7 +29,12 @@ import {
   validateConversionFn,
   saveMappingProfileFn,
 } from "@/lib/po/conversion.functions";
-import { PALLET_FIELDS, type ColumnMapping, type POHeaderInput, type ValidationIssue } from "@/lib/po/types";
+import {
+  PALLET_FIELDS,
+  type ColumnMapping,
+  type POHeaderInput,
+  type ValidationIssue,
+} from "@/lib/po/types";
 import { getMappingOptionLabel } from "@/lib/po/mapping";
 
 export const Route = createFileRoute("/")({
@@ -154,38 +159,46 @@ function ConvertExcelPage() {
 
   const generatedName = useMemo(() => {
     if (header.fileName?.trim()) return header.fileName.trim();
-    const seq = String(header.sequenceNumber || header.batchNumber || "").trim().padStart(4, "0");
-    const destination = String(header.destinationAddress || "000").trim().padStart(3, "0");
-    return `POMTS${seq}.${destination}`;
+    const seq = String(header.sequenceNumber || header.batchNumber || "")
+      .trim()
+      .padStart(3, "0");
+    const source = String(header.sourceAddress || "000")
+      .trim()
+      .slice(0, 3)
+      .padEnd(3, "0");
+    const destination = String(header.destinationAddress || "000")
+      .trim()
+      .slice(0, 3)
+      .padEnd(3, "0");
+    return `PO${source}${seq}.${destination}`;
   }, [header]);
 
   const addLog = (message: string) =>
     setLogLines((lines) => [`${new Date().toISOString()}  ${message}`, ...lines].slice(0, 300));
 
   function mergeSuggestedHeaderValues(
-  currentHeader: POHeaderInput,
-  suggested?: Partial<POHeaderInput>,
-): POHeaderInput {
-  if (!suggested) return currentHeader;
+    currentHeader: POHeaderInput,
+    suggested?: Partial<POHeaderInput>,
+  ): POHeaderInput {
+    if (!suggested) return currentHeader;
 
-  const suggestedValues = Object.fromEntries(
-    Object.entries(suggested).filter(([key, value]) => {
-      const currentValue = currentHeader[key as keyof POHeaderInput];
+    const suggestedValues = Object.fromEntries(
+      Object.entries(suggested).filter(([key, value]) => {
+        const currentValue = currentHeader[key as keyof POHeaderInput];
 
-      return (
-        typeof value === "string" &&
-        value.trim().length > 0 &&
-        (typeof currentValue !== "string" ||
-          currentValue.trim().length === 0)
-      );
-    }),
-  ) as Partial<POHeaderInput>;
+        return (
+          typeof value === "string" &&
+          value.trim().length > 0 &&
+          (typeof currentValue !== "string" || currentValue.trim().length === 0)
+        );
+      }),
+    ) as Partial<POHeaderInput>;
 
-  return {
-    ...currentHeader,
-    ...suggestedValues,
-  };
-}
+    return {
+      ...currentHeader,
+      ...suggestedValues,
+    };
+  }
 
   const payload = () => {
     if (!inspection) throw new Error("Upload an Excel file first.");
@@ -212,7 +225,9 @@ function ConvertExcelPage() {
       setHeader((prev) => mergeSuggestedHeaderValues(prev, data.suggestedHeaderValues));
       setResult(null);
       setPreview(null);
-      addLog(`File received: ${data.fileName} (${data.rowCount} rows, ${data.headers.length} columns)`);
+      addLog(
+        `File received: ${data.fileName} (${data.rowCount} rows, ${data.headers.length} columns)`,
+      );
       toast.success(`${data.fileName} uploaded`);
     } catch (error) {
       toast.error((error as Error).message);
@@ -227,9 +242,14 @@ function ConvertExcelPage() {
     setBusy("Reading worksheet");
     try {
       const data = await selectSheet({ data: { uploadId: inspection.uploadId, sheetName } });
-      setInspection({ ...inspection, ...(data as Omit<Inspection, "uploadId" | "fileName" | "fileSize" | "uploadedAt">) });
+      setInspection({
+        ...inspection,
+        ...(data as Omit<Inspection, "uploadId" | "fileName" | "fileSize" | "uploadedAt">),
+      });
       setMapping(data.suggestedMapping as ColumnMapping);
-      setHeader((prev) => mergeSuggestedHeaderValues(prev, (data as Inspection).suggestedHeaderValues));
+      setHeader((prev) =>
+        mergeSuggestedHeaderValues(prev, (data as Inspection).suggestedHeaderValues),
+      );
       addLog(`Worksheet selected: ${sheetName}`);
     } catch (error) {
       toast.error((error as Error).message);
@@ -243,7 +263,9 @@ function ConvertExcelPage() {
     try {
       const data = (await validate({ data: payload() })) as RunResult;
       setResult(data);
-      data.logs.forEach((l) => addLog(`${l.module}: ${l.action}${l.message ? ` — ${l.message}` : ""}`));
+      data.logs.forEach((l) =>
+        addLog(`${l.module}: ${l.action}${l.message ? ` — ${l.message}` : ""}`),
+      );
       if (data.errors.length) toast.error(`${data.errors.length} validation error(s)`);
       else toast.success("Validation passed");
     } catch (error) {
@@ -346,7 +368,10 @@ function ConvertExcelPage() {
         <CommandButton icon={Eraser} onClick={clearAll}>
           Clear
         </CommandButton>
-        <CommandButton icon={RefreshCw} onClick={() => inspection && changeSheet(inspection.sheetName)}>
+        <CommandButton
+          icon={RefreshCw}
+          onClick={() => inspection && changeSheet(inspection.sheetName)}
+        >
           Refresh
         </CommandButton>
         <span className="ml-auto pr-1">
@@ -385,7 +410,10 @@ function ConvertExcelPage() {
             </div>
           </FastTab>
 
-          <FastTab title="File Information" summary={inspection ? `${inspection.rowCount} rows` : "—"}>
+          <FastTab
+            title="File Information"
+            summary={inspection ? `${inspection.rowCount} rows` : "—"}
+          >
             {inspection ? (
               <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[12.5px] md:grid-cols-3">
                 <Info label="File name" value={inspection.fileName} />
@@ -465,7 +493,9 @@ function ConvertExcelPage() {
                     onClick={async () => {
                       const name = window.prompt("Mapping profile name", "Paltrack PO");
                       if (!name) return;
-                      await saveProfile({ data: { name, mapping: mapping as Record<string, string> } });
+                      await saveProfile({
+                        data: { name, mapping: mapping as Record<string, string> },
+                      });
                       toast.success("Mapping profile saved");
                     }}
                   >
@@ -489,9 +519,14 @@ function ConvertExcelPage() {
                     <tbody>
                       {PALLET_FIELDS.map((field) => {
                         const selected = mapping[field.key] ?? "";
-                        const sample = selected ? (inspection.previewRows[0]?.[selected] ?? "") : "";
+                        const sample = selected
+                          ? (inspection.previewRows[0]?.[selected] ?? "")
+                          : "";
                         return (
-                          <tr key={field.key} className="border-t border-border hover:bg-secondary/60">
+                          <tr
+                            key={field.key}
+                            className="border-t border-border hover:bg-secondary/60"
+                          >
                             <Td>{field.label}</Td>
                             <Td>{field.recordType}</Td>
                             <Td>
@@ -504,7 +539,10 @@ function ConvertExcelPage() {
                                 className="bc-input"
                                 value={selected}
                                 onChange={(e) =>
-                                  setMapping((m) => ({ ...m, [field.key]: e.target.value || undefined }))
+                                  setMapping((m) => ({
+                                    ...m,
+                                    [field.key]: e.target.value || undefined,
+                                  }))
                                 }
                               >
                                 <option value="">(not mapped)</option>
@@ -519,7 +557,9 @@ function ConvertExcelPage() {
                             <Td>
                               <StatusIndicator
                                 kind={selected ? "valid" : field.required ? "error" : "idle"}
-                                label={selected ? "Mapped" : field.required ? "Required" : "Optional"}
+                                label={
+                                  selected ? "Mapped" : field.required ? "Required" : "Optional"
+                                }
                               />
                             </Td>
                           </tr>
@@ -534,7 +574,11 @@ function ConvertExcelPage() {
             )}
           </FastTab>
 
-          <FastTab title="Excel Preview" summary={inspection ? `${inspection.previewRows.length} rows` : "—"} defaultOpen={false}>
+          <FastTab
+            title="Excel Preview"
+            summary={inspection ? `${inspection.previewRows.length} rows` : "—"}
+            defaultOpen={false}
+          >
             {inspection ? (
               <div className="max-h-72 overflow-auto border border-border">
                 <table className="border-collapse text-[12px]">
@@ -565,7 +609,10 @@ function ConvertExcelPage() {
             )}
           </FastTab>
 
-          <FastTab title="Validation" summary={`${result?.errors.length ?? 0} errors / ${result?.warnings.length ?? 0} warnings`}>
+          <FastTab
+            title="Validation"
+            summary={`${result?.errors.length ?? 0} errors / ${result?.warnings.length ?? 0} warnings`}
+          >
             {issues.length ? (
               <div className="max-h-72 overflow-auto border border-border">
                 <table className="w-full border-collapse text-[12px]">
@@ -615,22 +662,31 @@ function ConvertExcelPage() {
             {preview ? (
               <div className="max-h-96 overflow-auto border border-border bg-card">
                 <pre className="font-mono text-[11.5px] leading-[1.35]">
-                  {preview.content.split("\r\n").filter(Boolean).map((line, i) => (
-                    <div key={i} className="flex whitespace-pre">
-                      <span className="sticky left-0 w-12 shrink-0 select-none border-r border-border bg-secondary px-1 text-right text-muted-foreground">
-                        {i + 1}
-                      </span>
-                      <span className="px-2">{line}</span>
-                    </div>
-                  ))}
+                  {preview.content
+                    .split("\r\n")
+                    .filter(Boolean)
+                    .map((line, i) => (
+                      <div key={i} className="flex whitespace-pre">
+                        <span className="sticky left-0 w-12 shrink-0 select-none border-r border-border bg-secondary px-1 text-right text-muted-foreground">
+                          {i + 1}
+                        </span>
+                        <span className="px-2">{line}</span>
+                      </div>
+                    ))}
                 </pre>
               </div>
             ) : (
-              <p className="text-[12.5px] text-muted-foreground">Generate the PO file to preview it.</p>
+              <p className="text-[12.5px] text-muted-foreground">
+                Generate the PO file to preview it.
+              </p>
             )}
           </FastTab>
 
-          <FastTab title="Processing Log" summary={`${logLines.length} entries`} defaultOpen={false}>
+          <FastTab
+            title="Processing Log"
+            summary={`${logLines.length} entries`}
+            defaultOpen={false}
+          >
             <pre className="max-h-64 overflow-auto bg-secondary p-2 font-mono text-[11.5px]">
               {logLines.join("\n") || "No activity yet."}
             </pre>
@@ -658,7 +714,10 @@ function ConvertExcelPage() {
               {(result?.recordLengths ?? []).slice(0, 8).map((r, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span>{r.recordType}</span>
-                  <StatusIndicator kind={r.ok ? "valid" : "error"} label={`${r.length}/${r.expected}`} />
+                  <StatusIndicator
+                    kind={r.ok ? "valid" : "error"}
+                    label={`${r.length}/${r.expected}`}
+                  />
                 </div>
               ))}
               {!result ? <p className="text-muted-foreground">Not calculated.</p> : null}
@@ -714,7 +773,9 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="border-r border-border px-2 py-1 font-semibold whitespace-nowrap">{children}</th>;
+  return (
+    <th className="border-r border-border px-2 py-1 font-semibold whitespace-nowrap">{children}</th>
+  );
 }
 
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {

@@ -7,9 +7,15 @@ export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
       { title: "Conversion History | Excel to PO Converter" },
-      { name: "description", content: "Every Excel to Paltrack PO conversion with record, pallet and carton totals." },
+      {
+        name: "description",
+        content: "Every Excel to Paltrack PO conversion with record, pallet and carton totals.",
+      },
       { property: "og:title", content: "Conversion History" },
-      { property: "og:description", content: "Every Excel to Paltrack PO conversion with totals and status." },
+      {
+        property: "og:description",
+        content: "Every Excel to Paltrack PO conversion with totals and status.",
+      },
     ],
   }),
   component: History,
@@ -24,8 +30,20 @@ function History() {
         <table className="w-full border-collapse text-[12px]">
           <thead className="bg-secondary text-left">
             <tr>
-              {["Conversion ID", "Source File", "Output File", "Status", "Pallets", "Cartons", "Errors", "Created", "Completed"].map((h) => (
-                <th key={h} className="border-r border-border px-2 py-1 whitespace-nowrap">{h}</th>
+              {[
+                "Conversion ID",
+                "Source File",
+                "Output File",
+                "Status",
+                "Pallets",
+                "Cartons",
+                "Errors",
+                "Created",
+                "Completed",
+              ].map((h) => (
+                <th key={h} className="border-r border-border px-2 py-1 whitespace-nowrap">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -36,17 +54,28 @@ function History() {
                 <td className="border-r border-border px-2 py-1">{c.sourceFileName}</td>
                 <td className="border-r border-border px-2 py-1">{c.outputFileName}</td>
                 <td className="border-r border-border px-2 py-1">
-                  <StatusIndicator kind={c.status === "Completed" ? "valid" : "error"} label={c.status} />
+                  <StatusIndicator
+                    kind={c.status === "Completed" ? "valid" : "error"}
+                    label={c.status}
+                  />
                 </td>
                 <td className="border-r border-border px-2 py-1">{c.palletCount}</td>
                 <td className="border-r border-border px-2 py-1">{c.cartonCount}</td>
                 <td className="border-r border-border px-2 py-1">{c.errors.length}</td>
-                <td className="border-r border-border px-2 py-1">{new Date(c.createdAt).toLocaleString()}</td>
-                <td className="px-2 py-1">{c.completedAt ? new Date(c.completedAt).toLocaleString() : "—"}</td>
+                <td className="border-r border-border px-2 py-1">
+                  {new Date(c.createdAt).toLocaleString()}
+                </td>
+                <td className="px-2 py-1">
+                  {c.completedAt ? new Date(c.completedAt).toLocaleString() : "—"}
+                </td>
               </tr>
             ))}
             {!data.length ? (
-              <tr><td className="px-2 py-2 text-muted-foreground" colSpan={9}>No conversions recorded.</td></tr>
+              <tr>
+                <td className="px-2 py-2 text-muted-foreground" colSpan={9}>
+                  No conversions recorded.
+                </td>
+              </tr>
             ) : null}
           </tbody>
         </table>

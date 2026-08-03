@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  RecordWriter,
-  setFixedWidthField,
-  blankLine,
-} from "../lib/po/fixed-width";
+import { RecordWriter, setFixedWidthField, blankLine } from "../lib/po/fixed-width";
 import {
   formatDecimal,
   formatInteger,
@@ -14,12 +10,7 @@ import {
   parseExcelDate,
   toPlainText,
 } from "../lib/po/format";
-import {
-  buildFileName,
-  generatePOFile,
-  CRLF,
-  getNextSequenceNumber,
-} from "../lib/po/generator";
+import { buildFileName, generatePOFile, CRLF, getNextSequenceNumber } from "../lib/po/generator";
 import { RECORD_LENGTHS } from "../lib/po/builders";
 import { getMappingOptionLabel, resolveBackendMapping, suggestMapping } from "../lib/po/mapping";
 import type { POHeaderInput } from "../lib/po/types";
@@ -68,35 +59,19 @@ const rows = [
 
 describe("fixed-width helper", () => {
   it("writes alpha values left aligned and space padded", () => {
-    const { buffer } = setFixedWidthField(
-      blankLine(10),
-      1,
-      5,
-      "AB",
-    );
+    const { buffer } = setFixedWidthField(blankLine(10), 1, 5, "AB");
 
     expect(buffer).toBe("AB        ");
   });
 
   it("writes numeric values right aligned with zero padding", () => {
-    const { buffer } = setFixedWidthField(
-      blankLine(6),
-      1,
-      5,
-      "40",
-      { align: "numeric" },
-    );
+    const { buffer } = setFixedWidthField(blankLine(6), 1, 5, "40", { align: "numeric" });
 
     expect(buffer).toBe("00040 ");
   });
 
   it("reports overflow instead of silently truncating", () => {
-    const { errors } = setFixedWidthField(
-      blankLine(10),
-      1,
-      3,
-      "TOOLONG",
-    );
+    const { errors } = setFixedWidthField(blankLine(10), 1, 3, "TOOLONG");
 
     expect(errors[0].code).toBe("INVALID_FIELD_LENGTH");
     expect(errors[0].actualLength).toBe(7);
@@ -125,7 +100,7 @@ describe("formatting", () => {
   });
 
   it("avoids scientific notation for long numbers", () => {
-    expect(toPlainText(600123456789012345)).not.toMatch(/e\+/i);
+    expect(toPlainText("600123456789012345")).not.toMatch(/e\+/i);
   });
 
   it("parses excel serial dates", () => {
@@ -142,9 +117,7 @@ describe("formatting", () => {
   });
 
   it("formats time as hh:mm", () => {
-    expect(
-      formatPOTime(new Date(Date.UTC(2026, 0, 1, 8, 5))),
-    ).toBe("08:05");
+    expect(formatPOTime(new Date(Date.UTC(2026, 0, 1, 8, 5)))).toBe("08:05");
   });
 
   it("formats date-time values as yyyymmddhh:mm (spec)", () => {
@@ -160,16 +133,16 @@ describe("formatting", () => {
 });
 
 describe("file naming", () => {
-  it("builds POMTS sequential file names", () => {
+  it("builds Paltrack-style sequential file names", () => {
     expect(
       buildFileName(
         {
           ...header,
           fileName: undefined,
         },
-        "0001",
+        "001",
       ),
-    ).toBe("POMTS0001.000");
+    ).toBe("POMTS001.000");
 
     expect(
       buildFileName(
@@ -177,9 +150,9 @@ describe("file naming", () => {
           ...header,
           fileName: undefined,
         },
-        "0002",
+        "002",
       ),
-    ).toBe("POMTS0002.000");
+    ).toBe("POMTS002.000");
   });
 
   it("increments the next sequence number for subsequent generations", () => {
@@ -191,7 +164,7 @@ describe("file naming", () => {
         },
         0,
       ),
-    ).toBe("0001");
+    ).toBe("001");
 
     expect(
       getNextSequenceNumber(
@@ -201,7 +174,7 @@ describe("file naming", () => {
         },
         1,
       ),
-    ).toBe("0002");
+    ).toBe("002");
   });
 });
 
@@ -214,7 +187,9 @@ describe("backend mapping", () => {
 
   it("adds a clearer display label for known header aliases", () => {
     expect(getMappingOptionLabel("ctn_qty", "cartons")).toBe("ctn_qty — Carton Quantity");
-    expect(getMappingOptionLabel("Actual Gross Weight", "grossMass")).toBe("Actual Gross Weight — Pallet Gross Mass");
+    expect(getMappingOptionLabel("Actual Gross Weight", "grossMass")).toBe(
+      "Actual Gross Weight — Pallet Gross Mass",
+    );
     expect(getMappingOptionLabel("Country", "country")).toBe("Country");
   });
 
@@ -435,14 +410,10 @@ describe("PO generation", () => {
     rows,
   });
 
-  const lines = result.content
-    .split(CRLF)
-    .filter(Boolean);
+  const lines = result.content.split(CRLF).filter(Boolean);
 
   it("produces the nested record sequence", () => {
-    expect(
-      lines.map((line) => line.slice(0, 2)),
-    ).toEqual([
+    expect(lines.map((line) => line.slice(0, 2))).toEqual([
       "BH",
       "OH",
       "OL",
@@ -457,40 +428,38 @@ describe("PO generation", () => {
   it("uses CRLF line endings", () => {
     expect(result.content).toContain(CRLF);
 
-    expect(
-      result.content.replace(/\r\n/g, ""),
-    ).not.toContain("\n");
+    expect(result.content.replace(/\r\n/g, "")).not.toContain("\n");
 
     expect(result.content.endsWith(CRLF)).toBe(true);
   });
 
+  it("writes BH and OH fields into the documented positions", () => {
+    const [bh, oh] = lines.slice(0, 2);
+
+    expect(bh.slice(2, 5)).toBe("MTS");
+    expect(bh.slice(5, 11)).toBe("000001");
+    expect(oh.slice(2, 12)).toBe("MTS-000001");
+    expect(oh.slice(12, 22)).toBe("MTS-000001");
+  });
+
   it("generates exact record lengths", () => {
     for (const line of lines) {
-      const type = line.slice(
-        0,
-        2,
-      ) as keyof typeof RECORD_LENGTHS;
+      const type = line.slice(0, 2) as keyof typeof RECORD_LENGTHS;
 
       expect(line.length).toBe(RECORD_LENGTHS[type]);
     }
   });
 
   it("OP is 1012 and BT is 60 characters", () => {
-    expect(
-      lines.find((line) => line.startsWith("OP"))!.length,
-    ).toBe(1012);
+    expect(lines.find((line) => line.startsWith("OP"))!.length).toBe(1012);
 
-    expect(
-      lines.find((line) => line.startsWith("BT"))!.length,
-    ).toBe(60);
+    expect(lines.find((line) => line.startsWith("BT"))!.length).toBe(60);
   });
 
   it("places SSCC at 316-333 and blanks pallet id when SSCC exists", () => {
     const op = lines[5];
 
-    expect(op.slice(315, 333)).toBe(
-      "600123456789012345",
-    );
+    expect(op.slice(315, 333)).toBe("600123456789012345");
 
     expect(op.slice(12, 21).trim()).toBe("");
   });
@@ -500,11 +469,7 @@ describe("PO generation", () => {
 
     expect(op.slice(12, 21)).toBe("000123457");
 
-    expect(
-      result.warnings.some(
-        (warning) => warning.code === "SSCC_BLANK",
-      ),
-    ).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "SSCC_BLANK")).toBe(true);
   });
 
   it("writes carton quantity zero padded at 131-135", () => {
@@ -551,35 +516,21 @@ describe("PO generation", () => {
       .filter((line) => line.startsWith("OP"));
 
     const repeatedSequences = opLines
-      .filter(
-        (line) =>
-          line.slice(315, 333) ===
-          "600123456789012345",
-      )
+      .filter((line) => line.slice(315, 333) === "600123456789012345")
       .map((line) => line.slice(21, 26))
       .sort();
 
-    const uniquePalletLine = opLines.find(
-      (line) =>
-        line.slice(12, 21) === "000123457",
-    );
+    const uniquePalletLine = opLines.find((line) => line.slice(12, 21) === "000123457");
 
-    expect(repeatedSequences).toEqual([
-      "00001",
-      "00002",
-    ]);
+    expect(repeatedSequences).toEqual(["00001", "00002"]);
 
     expect(uniquePalletLine).toBeDefined();
 
-    expect(
-      uniquePalletLine!.slice(21, 26),
-    ).toBe("00001");
+    expect(uniquePalletLine!.slice(21, 26)).toBe("00001");
   });
 
   it("writes gross mass with three decimals at 700-709", () => {
-    expect(lines[5].slice(699, 709)).toBe(
-      "001409.000",
-    );
+    expect(lines[5].slice(699, 709)).toBe("001409.000");
   });
 
   it("writes document-defined OP values into their fixed-width positions", () => {
@@ -698,11 +649,7 @@ describe("PO generation", () => {
       ],
     });
 
-    expect(
-      bad.errors.some(
-        (error) => error.code === "UNKNOWN_CODE",
-      ),
-    ).toBe(true);
+    expect(bad.errors.some((error) => error.code === "UNKNOWN_CODE")).toBe(true);
   });
 
   it("flags invalid dates with row, field and positions", () => {
@@ -721,9 +668,7 @@ describe("PO generation", () => {
       ],
     });
 
-    const error = bad.errors.find(
-      (item) => item.code === "INVALID_DATE",
-    )!;
+    const error = bad.errors.find((item) => item.code === "INVALID_DATE")!;
 
     expect(error.excelRow).toBe(9);
     expect(error.recordType).toBe("OP");
@@ -755,14 +700,7 @@ describe("PO generation", () => {
     });
 
     const lines = result.content.split(CRLF).filter(Boolean);
-    expect(lines.map((line) => line.slice(0, 2))).toEqual([
-      "BH",
-      "OH",
-      "OL",
-      "OC",
-      "OP",
-      "BT",
-    ]);
+    expect(lines.map((line) => line.slice(0, 2))).toEqual(["BH", "OH", "OL", "OC", "OP", "BT"]);
     expect(result.recordCount).toBe(6);
     expect(lines.find((line) => line.startsWith("OK"))).toBeUndefined();
   });
@@ -802,9 +740,7 @@ describe("PO generation", () => {
 
     expect(
       bad.errors.some(
-        (error) =>
-          error.code === "INVALID_FIELD_LENGTH" &&
-          error.field === "containerNumber",
+        (error) => error.code === "INVALID_FIELD_LENGTH" && error.field === "containerNumber",
       ),
     ).toBe(true);
   });

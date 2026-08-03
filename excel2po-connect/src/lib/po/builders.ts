@@ -34,18 +34,25 @@ export interface BuiltRecord {
 interface Ctx {
   header: POHeaderInput;
   loadId: string;
+  batchNumber: string;
+  fileSequence: string;
   transactionDate: string;
   transactionTime: string;
 }
 
 export function makeContext(header: POHeaderInput): Ctx {
   const now = new Date();
-  const loadId =
-    (header.loadId?.trim() ||
-      `${header.sourceAddress}-${String(header.batchNumber).padStart(6, "0")}`).slice(0, 10);
+  const sequenceSource = header.sequenceNumber?.trim() || header.batchNumber?.trim() || "1";
+  const sequenceValue = Number.parseInt(sequenceSource, 10);
+  const fileSequence = String(Number.isNaN(sequenceValue) ? 1 : sequenceValue).padStart(3, "0");
+  const batchNumber = String(Number.isNaN(sequenceValue) ? 1 : sequenceValue).padStart(6, "0");
+  const fromDepot = (header.sourceAddress?.trim() || "000").slice(0, 3);
+  const loadId = (header.loadId?.trim() || `${fromDepot}-${batchNumber}`).slice(0, 10);
   return {
     header,
     loadId,
+    batchNumber,
+    fileSequence,
     transactionDate: header.transactionDate?.trim() || formatPODate(now)!,
     transactionTime: header.transactionTime?.trim() || formatPOTime(now),
   };
@@ -55,13 +62,13 @@ export function buildBHRecord(ctx: Ctx): BuiltRecord {
   const h = ctx.header;
   const w = new RecordWriter(RECORD_LENGTHS.BH, "BH");
   w.put(1, 2, "BH", { field: "recordType" });
-  w.put(3, 5, h.sourceAddress, { field: "sourceAddress" });
-  w.num(6, 11, formatInteger(h.batchNumber, 6), { field: "batchNumber" });
+  w.put(3, 5, (h.sourceAddress || "000").trim().slice(0, 3), { field: "sourceAddress" });
+  w.num(6, 11, ctx.batchNumber, { field: "batchNumber" });
   w.put(12, 19, ctx.transactionDate, { field: "transactionDate" });
   w.put(20, 27, `${ctx.transactionTime}:00`, { field: "transactionTime" });
-  w.put(28, 29, "PO", { field: "messageType" });
-  w.put(30, 59, h.provider, { field: "provider", allowTruncate: true });
-  w.put(60, 89, h.version, { field: "version", allowTruncate: true });
+  w.put(28, 29, "", { field: "indicator" });
+  w.put(30, 59, (h.provider || "Paltrack").trim(), { field: "provider", allowTruncate: true });
+  w.put(60, 89, (h.version || "2.18").trim(), { field: "version", allowTruncate: true });
   const { line, errors } = w.done();
   return { recordType: "BH", line, errors };
 }
@@ -72,16 +79,23 @@ export function buildOHRecord(ctx: Ctx, palletCount: number, cartonCount: number
   w.put(1, 2, "OH", { field: "recordType" });
   w.put(3, 12, ctx.loadId, { field: "loadId" });
   w.put(13, 22, h.loadReference?.trim() || ctx.loadId, { field: "loadReference" });
+  w.put(23, 47, h.loadReference?.trim() || ctx.loadId, { field: "loadName" });
   w.put(48, 48, "R", { field: "transportMode" });
   // Per spec: transport (R), load_type (F=flat-bed or R=reefer), load_status (P planning, etc.)
-  w.put(49, 49, h.loadType || "F", { field: "loadType" } as any);
-  w.put(50, 50, h.loadStatus || "P", { field: "loadStatus" } as any);
+  w.put(49, 49, h.loadType || "F", { field: "loadType" });
+  w.put(50, 50, h.loadStatus || "P", { field: "loadStatus" });
   w.num(134, 138, formatInteger(palletCount, 5), { field: "palletCount" });
   w.num(139, 146, formatInteger(cartonCount, 8), { field: "cartonCount" });
   w.put(159, 160, h.destinationType || "DP", { field: "destinationType" });
   w.put(161, 167, h.locationCode, { field: "locationCode" });
   w.put(190, 196, h.locationCode, { field: "locationCode" });
   w.put(197, 200, ctx.transactionDate.slice(0, 4), { field: "season" });
+  w.put(
+    207,
+    214,
+    `${(h.sourceAddress || "000").trim().slice(0, 3)}${ctx.fileSequence}`.slice(0, 8),
+    { field: "tripNo" },
+  );
   w.put(215, 215, "Y", { field: "transmitFlag" });
   w.num(216, 220, formatInteger(1, 5), { field: "revision" });
   const { line, errors } = w.done();
@@ -122,11 +136,7 @@ export function buildOKRecord(ctx: Ctx, palletCount: number): BuiltRecord {
   return { recordType: "OK", line, errors };
 }
 
-export function buildOCRecord(
-  ctx: Ctx,
-  palletCount: number,
-  cartonCount: number,
-): BuiltRecord {
+export function buildOCRecord(ctx: Ctx, palletCount: number, cartonCount: number): BuiltRecord {
   const h = ctx.header;
   const w = new RecordWriter(RECORD_LENGTHS.OC, "OC");
   w.put(1, 2, "OC", { field: "recordType" });
@@ -147,11 +157,7 @@ export function buildOCRecord(
   return { recordType: "OC", line, errors };
 }
 
-export function buildOPRecord(
-  ctx: Ctx,
-  row: PalletRow,
-  sequence: number,
-): BuiltRecord {
+export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): BuiltRecord {
   const h = ctx.header;
   const v = row.values;
   const w = new RecordWriter(RECORD_LENGTHS.OP, "OP", row.excelRow);
@@ -172,7 +178,9 @@ export function buildOPRecord(
   w.put(72, 72, "N", { field: "containerSplit" });
   w.put(73, 73, h.channel || "E", { field: "channel" });
   w.put(74, 75, h.organisationCode, { field: "organisation" });
-  w.put(76, 77, codeOrError(w, "country", v.country, 2, 76, 77, "country", row.excelRow), { field: "country" });
+  w.put(76, 77, codeOrError(w, "country", v.country, 2, 76, 77, "country", row.excelRow), {
+    field: "country",
+  });
   w.put(78, 79, get("commGrp"), { field: "commGrp" });
   w.put(80, 81, get("commodity"), { field: "commodity" });
   w.put(82, 83, get("varGrp"), { field: "varGrp" });
@@ -200,12 +208,16 @@ export function buildOPRecord(
   w.put(166, 172, h.locationCode, { field: "originalDepot" });
   w.put(173, 180, intake, { field: "originalIntakeDate" });
   w.put(181, 181, get("shift"), { field: "shift" });
-  w.put(182, 189, dateOrError(w, v.shiftDate, "shiftDate", 182, 189, row.excelRow), { field: "shiftDate" });
+  w.put(182, 189, dateOrError(w, v.shiftDate, "shiftDate", 182, 189, row.excelRow), {
+    field: "shiftDate",
+  });
   w.put(190, 195, get("orderNo"), { field: "orderNo" });
   w.put(196, 202, h.locationCode, { field: "locationCode" });
   w.put(203, 204, get("store"), { field: "store" });
   w.put(205, 206, get("stockPool"), { field: "stockPool" });
-  w.put(207, 219, dateTimeOrError(w, v.shippedDate, "shippedDate", 207, 219, row.excelRow), { field: "shippedDate" });
+  w.put(207, 219, dateTimeOrError(w, v.shippedDate, "shippedDate", 207, 219, row.excelRow), {
+    field: "shippedDate",
+  });
   w.put(220, 220, "Y", { field: "transmitFlag" });
   w.num(221, 225, formatInteger(1, 5), { field: "revision" });
   w.put(241, 248, ctx.transactionDate, { field: "transactionDate" });
@@ -213,7 +225,14 @@ export function buildOPRecord(
   w.put(254, 254, "S", { field: "palletBinType" });
   w.put(255, 264, get("origCons"), { field: "origCons" });
   w.put(265, 270, get("shipNumber"), { field: "shipNumber" });
-  w.put(271, 276, v.temperature === null || v.temperature === undefined || String(v.temperature).trim() === "" ? "" : formatDecimal(v.temperature, 6, 2), { field: "temperature" });
+  w.put(
+    271,
+    276,
+    v.temperature === null || v.temperature === undefined || String(v.temperature).trim() === ""
+      ? ""
+      : formatDecimal(v.temperature, 6, 2),
+    { field: "temperature" },
+  );
   w.put(277, 285, get("comboPalletId"), { field: "comboPalletId" });
   w.put(286, 305, get("tempDeviceId"), { field: "tempDeviceId" });
   w.put(306, 307, get("tempDeviceType"), { field: "tempDeviceType" });
@@ -256,7 +275,9 @@ export function buildOPRecord(
   w.put(359, 374, get("saftbin2"), { field: "saftbin2" });
   w.put(375, 390, get("saftbin3"), { field: "saftbin3" });
   w.put(391, 396, get("origAccount"), { field: "origAccount" });
-  w.put(397, 404, dateOrError(w, v.inspectionDate, "inspectionDate", 397, 404, row.excelRow), { field: "inspectionDate" });
+  w.put(397, 404, dateOrError(w, v.inspectionDate, "inspectionDate", 397, 404, row.excelRow), {
+    field: "inspectionDate",
+  });
   w.put(405, 405, get("stackVariance"), { field: "stackVariance" });
   w.put(406, 406, get("storeType"), { field: "storeType" });
   w.put(407, 426, get("batchNo"), { field: "batchNo" });
@@ -271,12 +292,34 @@ export function buildOPRecord(
   w.put(474, 491, get("comboSscc"), { field: "comboSscc" });
   w.put(492, 497, get("inspector"), { field: "inspector" });
   w.put(498, 503, get("inspectionPoint"), { field: "inspectionPoint" });
+  w.put(504, 513, get("expiryCode"), { field: "expiryCode" });
   w.put(514, 528, get("orchard"), { field: "orchard", allowTruncate: true });
-  w.put(534, 535, codeOrError(w, "country", v.targetCountry, 2, 534, 535, "targetCountry", row.excelRow), { field: "targetCountry" });
+  w.put(529, 533, get("targetRegion"), { field: "targetRegion" });
+  w.put(
+    534,
+    535,
+    codeOrError(w, "country", v.targetCountry, 2, 534, 535, "targetCountry", row.excelRow),
+    { field: "targetCountry" },
+  );
+  w.put(536, 555, get("globalGapNumber"), { field: "globalGapNumber" });
+  w.put(556, 575, get("lotNo"), { field: "lotNo" });
+  w.put(576, 595, get("traceabilityCode"), { field: "traceabilityCode" });
   w.put(596, 599, get("season"), { field: "season" });
-  w.put(600, 607, dateOrError(w, v.origInspectionDate, "origInspectionDate", 600, 607, row.excelRow), { field: "originalInspectionDate" });
+  w.put(
+    600,
+    607,
+    dateOrError(w, v.origInspectionDate, "origInspectionDate", 600, 607, row.excelRow),
+    { field: "originalInspectionDate" },
+  );
   w.put(608, 617, get("innerPack"), { field: "innerPack" });
-  w.put(618, 622, v.innerCartons === null || v.innerCartons === undefined || String(v.innerCartons).trim() === "" ? "" : formatInteger(v.innerCartons, 5), { field: "innerCartons" });
+  w.put(
+    618,
+    622,
+    v.innerCartons === null || v.innerCartons === undefined || String(v.innerCartons).trim() === ""
+      ? ""
+      : formatInteger(v.innerCartons, 5),
+    { field: "innerCartons" },
+  );
   w.put(623, 642, get("productionId"), { field: "productionId" });
   w.put(643, 644, get("protocolExceptionIndicator"), { field: "protocolExceptionIndicator" });
   w.put(645, 669, get("upn"), { field: "upn", allowTruncate: true });
@@ -289,7 +332,12 @@ export function buildOPRecord(
   }
   w.put(710, 719, get("samsaAccreditation"), { field: "samsaAccreditation" });
   w.put(720, 726, get("weighingLocation"), { field: "weighingLocation" });
-  w.put(727, 739, dateTimeOrError(w, v.weighingDateTime, "weighingDateTime", 727, 739, row.excelRow), { field: "weighingDateTime" });
+  w.put(
+    727,
+    739,
+    dateTimeOrError(w, v.weighingDateTime, "weighingDateTime", 727, 739, row.excelRow),
+    { field: "weighingDateTime" },
+  );
   w.put(740, 741, get("mainArea"), { field: "mainArea" });
   w.put(742, 757, get("productionArea"), { field: "productionArea", allowTruncate: true });
   w.put(758, 767, get("phytoData"), { field: "phytoData", allowTruncate: true });

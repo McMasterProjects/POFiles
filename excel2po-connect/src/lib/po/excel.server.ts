@@ -50,9 +50,9 @@ export function inspectWorkbook(
   const headers = (matrix[0] ?? []).map((h, i) => String(h ?? "").trim() || `Column ${i + 1}`);
   const dataRows = matrix.slice(1);
 
-  const previewRows = dataRows.slice(0, previewLimit).map((row) =>
-    Object.fromEntries(headers.map((h, i) => [h, String(row[i] ?? "")])),
-  );
+  const previewRows = dataRows
+    .slice(0, previewLimit)
+    .map((row) => Object.fromEntries(headers.map((h, i) => [h, String(row[i] ?? "")])));
 
   return {
     worksheets,
