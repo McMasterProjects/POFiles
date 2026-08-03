@@ -30,6 +30,7 @@ import {
   saveMappingProfileFn,
 } from "@/lib/po/conversion.functions";
 import { PALLET_FIELDS, type ColumnMapping, type POHeaderInput, type ValidationIssue } from "@/lib/po/types";
+import { getMappingOptionLabel } from "@/lib/po/mapping";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -162,22 +163,29 @@ function ConvertExcelPage() {
     setLogLines((lines) => [`${new Date().toISOString()}  ${message}`, ...lines].slice(0, 300));
 
   function mergeSuggestedHeaderValues(
-    currentHeader: POHeaderInput,
-    suggested?: Partial<POHeaderInput>,
-  ): POHeaderInput {
-    if (!suggested) return currentHeader;
-    return {
-      ...currentHeader,
-      ...Object.fromEntries(
-        Object.entries(suggested).filter(
-          ([key, value]) =>
-            typeof value === "string" &&
-            value.trim().length > 0 &&
-            !(currentHeader[key as keyof POHeaderInput]?.trim().length > 0),
-        ),
-      ) as Partial<POHeaderInput>,
-    } as POHeaderInput;
-  }
+  currentHeader: POHeaderInput,
+  suggested?: Partial<POHeaderInput>,
+): POHeaderInput {
+  if (!suggested) return currentHeader;
+
+  const suggestedValues = Object.fromEntries(
+    Object.entries(suggested).filter(([key, value]) => {
+      const currentValue = currentHeader[key as keyof POHeaderInput];
+
+      return (
+        typeof value === "string" &&
+        value.trim().length > 0 &&
+        (typeof currentValue !== "string" ||
+          currentValue.trim().length === 0)
+      );
+    }),
+  ) as Partial<POHeaderInput>;
+
+  return {
+    ...currentHeader,
+    ...suggestedValues,
+  };
+}
 
   const payload = () => {
     if (!inspection) throw new Error("Upload an Excel file first.");
@@ -502,7 +510,7 @@ function ConvertExcelPage() {
                                 <option value="">(not mapped)</option>
                                 {inspection.headers.map((h) => (
                                   <option key={h} value={h}>
-                                    {h}
+                                    {getMappingOptionLabel(h, field.key)}
                                   </option>
                                 ))}
                               </select>

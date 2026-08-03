@@ -85,10 +85,10 @@ export function runConversion(input: {
     message: `${Object.keys(input.mapping).length} mapped fields`,
   });
 
-  const { rows } = readSheetRows(upload.base64, input.sheetName);
+  const { headers, rows } = readSheetRows(upload.base64, input.sheetName);
   logEvent(conversionId, "excel-reader", "Rows parsed", { message: `${rows.length} rows` });
 
-  const palletRows = applyMapping(rows, input.mapping);
+  const palletRows = applyMapping(rows, input.mapping, headers);
   logEvent(conversionId, "validation", "Validation started");
 
   const sequenceNumber = getNextSequenceNumber(input.header, store.conversions.size);

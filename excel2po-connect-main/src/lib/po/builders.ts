@@ -3,6 +3,7 @@ import {
   formatDecimal,
   formatInteger,
   formatPODate,
+  formatPODateTime,
   formatPOTime,
   isValidSSCC,
   toNumber,
@@ -65,16 +66,18 @@ export function buildBHRecord(ctx: Ctx): BuiltRecord {
   return { recordType: "BH", line, errors };
 }
 
-export function buildOHRecord(ctx: Ctx, palletCount: number): BuiltRecord {
+export function buildOHRecord(ctx: Ctx, palletCount: number, cartonCount: number): BuiltRecord {
   const h = ctx.header;
   const w = new RecordWriter(RECORD_LENGTHS.OH, "OH");
   w.put(1, 2, "OH", { field: "recordType" });
   w.put(3, 12, ctx.loadId, { field: "loadId" });
   w.put(13, 22, h.loadReference?.trim() || ctx.loadId, { field: "loadReference" });
   w.put(48, 48, "R", { field: "transportMode" });
-  w.put(49, 49, "R", { field: "transportType" });
-  w.put(50, 50, "D", { field: "loadType" });
+  // Per spec: transport (R), load_type (F=flat-bed or R=reefer), load_status (P planning, etc.)
+  w.put(49, 49, h.loadType || "F", { field: "loadType" } as any);
+  w.put(50, 50, h.loadStatus || "P", { field: "loadStatus" } as any);
   w.num(134, 138, formatInteger(palletCount, 5), { field: "palletCount" });
+  w.num(139, 146, formatInteger(cartonCount, 8), { field: "cartonCount" });
   w.put(159, 160, h.destinationType || "DP", { field: "destinationType" });
   w.put(161, 167, h.locationCode, { field: "locationCode" });
   w.put(190, 196, h.locationCode, { field: "locationCode" });
@@ -170,29 +173,52 @@ export function buildOPRecord(
   w.put(73, 73, h.channel || "E", { field: "channel" });
   w.put(74, 75, h.organisationCode, { field: "organisation" });
   w.put(76, 77, codeOrError(w, "country", v.country, 2, 76, 77, "country", row.excelRow), { field: "country" });
+  w.put(78, 79, get("commGrp"), { field: "commGrp" });
   w.put(80, 81, get("commodity"), { field: "commodity" });
+  w.put(82, 83, get("varGrp"), { field: "varGrp" });
   w.put(84, 86, get("variety"), { field: "variety" });
+  w.put(87, 89, get("subVar"), { field: "subVar" });
+  w.put(90, 92, get("actVar"), { field: "actVar" });
   w.put(93, 96, get("pack"), { field: "pack" });
   w.put(97, 100, get("grade"), { field: "grade" });
   w.put(101, 105, get("mark"), { field: "mark" });
   w.put(106, 110, get("sizeCount"), { field: "sizeCount" });
   w.put(111, 112, get("inventoryCode"), { field: "inventoryCode" });
+  w.put(113, 116, get("pickRef"), { field: "pickRef" });
   w.put(117, 123, get("farm"), { field: "farm" });
+  w.put(124, 125, get("prodGrp"), { field: "prodGrp" });
+  w.put(126, 128, get("prodChar"), { field: "prodChar" });
   w.put(129, 130, get("targetMarket"), { field: "targetMarket" });
   w.num(131, 135, formatInteger(v.cartons, 5), { field: "cartons" });
   w.num(136, 144, formatInteger(v.palletQuantity ?? 1, 9), { field: "palletQuantity" });
   w.put(145, 145, "N", { field: "mixedIndicator" });
+  w.put(146, 153, get("remarks"), { field: "remarks" });
+  w.put(154, 157, get("reason"), { field: "reason" });
 
   const intake = dateOrError(w, v.originalIntakeDate, "originalIntakeDate", 173, 180, row.excelRow);
   w.put(158, 165, intake, { field: "intakeDate" });
   w.put(166, 172, h.locationCode, { field: "originalDepot" });
   w.put(173, 180, intake, { field: "originalIntakeDate" });
+  w.put(181, 181, get("shift"), { field: "shift" });
+  w.put(182, 189, dateOrError(w, v.shiftDate, "shiftDate", 182, 189, row.excelRow), { field: "shiftDate" });
+  w.put(190, 195, get("orderNo"), { field: "orderNo" });
   w.put(196, 202, h.locationCode, { field: "locationCode" });
+  w.put(203, 204, get("store"), { field: "store" });
+  w.put(205, 206, get("stockPool"), { field: "stockPool" });
+  w.put(207, 219, dateTimeOrError(w, v.shippedDate, "shippedDate", 207, 219, row.excelRow), { field: "shippedDate" });
   w.put(220, 220, "Y", { field: "transmitFlag" });
   w.num(221, 225, formatInteger(1, 5), { field: "revision" });
   w.put(241, 248, ctx.transactionDate, { field: "transactionDate" });
   w.put(249, 253, ctx.transactionTime, { field: "transactionTime" });
   w.put(254, 254, "S", { field: "palletBinType" });
+  w.put(255, 264, get("origCons"), { field: "origCons" });
+  w.put(265, 270, get("shipNumber"), { field: "shipNumber" });
+  w.put(271, 276, v.temperature === null || v.temperature === undefined || String(v.temperature).trim() === "" ? "" : formatDecimal(v.temperature, 6, 2), { field: "temperature" });
+  w.put(277, 285, get("comboPalletId"), { field: "comboPalletId" });
+  w.put(286, 305, get("tempDeviceId"), { field: "tempDeviceId" });
+  w.put(306, 307, get("tempDeviceType"), { field: "tempDeviceType" });
+  w.put(308, 313, get("boeNo"), { field: "boeNo" });
+  w.put(314, 315, get("principal"), { field: "principal" });
 
   if (ssccRaw) {
     if (!isValidSSCC(ssccRaw)) {
@@ -225,19 +251,55 @@ export function buildOPRecord(
     });
   }
 
-  w.num(334, 342, formatDecimal(v.nettMass, 9, 2), { field: "nettMass" });
+  w.num(334, 342, formatDecimal(v.nettMass, 9, 3), { field: "nettMass" });
+  w.put(343, 358, get("saftbin1"), { field: "saftbin1" });
+  w.put(359, 374, get("saftbin2"), { field: "saftbin2" });
+  w.put(375, 390, get("saftbin3"), { field: "saftbin3" });
+  w.put(391, 396, get("origAccount"), { field: "origAccount" });
   w.put(397, 404, dateOrError(w, v.inspectionDate, "inspectionDate", 397, 404, row.excelRow), { field: "inspectionDate" });
+  w.put(405, 405, get("stackVariance"), { field: "stackVariance" });
+  w.put(406, 406, get("storeType"), { field: "storeType" });
+  w.put(407, 426, get("batchNo"), { field: "batchNo" });
+  w.put(427, 436, get("waybillNo"), { field: "waybillNo" });
+  w.put(437, 450, get("gtin"), { field: "gtin" });
   w.put(451, 457, get("packhouseCode"), { field: "packhouseCode" });
+  w.put(458, 459, get("steriFlag"), { field: "steriFlag" });
+  w.put(460, 461, get("steriDest"), { field: "steriDest" });
+  w.put(462, 462, get("labelType"), { field: "labelType" });
+  w.put(463, 463, get("provFlag"), { field: "provFlag" });
+  w.put(464, 473, get("sellbyCode"), { field: "sellbyCode" });
+  w.put(474, 491, get("comboSscc"), { field: "comboSscc" });
   w.put(492, 497, get("inspector"), { field: "inspector" });
   w.put(498, 503, get("inspectionPoint"), { field: "inspectionPoint" });
   w.put(514, 528, get("orchard"), { field: "orchard", allowTruncate: true });
   w.put(534, 535, codeOrError(w, "country", v.targetCountry, 2, 534, 535, "targetCountry", row.excelRow), { field: "targetCountry" });
   w.put(596, 599, get("season"), { field: "season" });
-  w.put(600, 607, intake, { field: "originalInspectionDate" });
+  w.put(600, 607, dateOrError(w, v.origInspectionDate, "origInspectionDate", 600, 607, row.excelRow), { field: "originalInspectionDate" });
+  w.put(608, 617, get("innerPack"), { field: "innerPack" });
+  w.put(618, 622, v.innerCartons === null || v.innerCartons === undefined || String(v.innerCartons).trim() === "" ? "" : formatInteger(v.innerCartons, 5), { field: "innerCartons" });
+  w.put(623, 642, get("productionId"), { field: "productionId" });
+  w.put(643, 644, get("protocolExceptionIndicator"), { field: "protocolExceptionIndicator" });
   w.put(645, 669, get("upn"), { field: "upn", allowTruncate: true });
-  w.num(700, 709, formatDecimal(v.grossMass, 10, 3), { field: "palletGrossMass" });
+  w.put(670, 699, get("palletTreatment"), { field: "palletTreatment", allowTruncate: true });
+  // Per spec: pallet_gross_mass is carried only on the first sequence of a pallet
+  if (sequence === 1) {
+    w.num(700, 709, formatDecimal(v.grossMass, 10, 3), { field: "palletGrossMass" });
+  } else {
+    w.put(700, 709, "", { field: "palletGrossMass" });
+  }
+  w.put(710, 719, get("samsaAccreditation"), { field: "samsaAccreditation" });
+  w.put(720, 726, get("weighingLocation"), { field: "weighingLocation" });
+  w.put(727, 739, dateTimeOrError(w, v.weighingDateTime, "weighingDateTime", 727, 739, row.excelRow), { field: "weighingDateTime" });
+  w.put(740, 741, get("mainArea"), { field: "mainArea" });
   w.put(742, 757, get("productionArea"), { field: "productionArea", allowTruncate: true });
   w.put(758, 767, get("phytoData"), { field: "phytoData", allowTruncate: true });
+  w.put(768, 807, get("custOrd"), { field: "custOrd", allowTruncate: true });
+  w.put(808, 817, get("reInspectionDocument"), { field: "reInspectionDocument" });
+  w.put(818, 827, get("eLotKey"), { field: "eLotKey" });
+  w.put(828, 837, get("agreementCode"), { field: "agreementCode" });
+  w.put(838, 977, get("postTreatment"), { field: "postTreatment", allowTruncate: true });
+  w.put(978, 997, get("referenceNumber"), { field: "referenceNumber" });
+  w.put(998, 1012, get("eLotKey"), { field: "eLotKey" });
 
   if (!palletId && !ssccRaw) {
     w.errors.push({
@@ -349,6 +411,22 @@ function dateOrError(
       toPosition: to,
       value: String(raw),
     });
+    return "";
+  }
+  return formatted;
+}
+
+function dateTimeOrError(
+  w: RecordWriter,
+  raw: unknown,
+  field: string,
+  from: number,
+  to: number,
+  excelRow?: number,
+): string {
+  if (raw === null || raw === undefined || String(raw).trim() === "") return "";
+  const formatted = formatPODateTime(raw);
+  if (!formatted) {
     return "";
   }
   return formatted;

@@ -17,8 +17,16 @@ export function parseExcelDate(value: unknown): Date | null {
   // Excel serial supplied as text
   if (/^\d{5}(\.\d+)?$/.test(text)) return parseExcelDate(Number(text));
 
+  // yyyymmddhhmm
+  let m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(text);
+  if (m) return makeUTC(+m[1], +m[2], +m[3], +m[4], +m[5]);
+
+  // yyyymmddhh:mm
+  m = /^(\d{4})(\d{2})(\d{2})(\d{2}):(\d{2})$/.exec(text);
+  if (m) return makeUTC(+m[1], +m[2], +m[3], +m[4], +m[5]);
+
   // yyyymmdd
-  let m = /^(\d{4})(\d{2})(\d{2})$/.exec(text);
+  m = /^(\d{4})(\d{2})(\d{2})$/.exec(text);
   if (m) return makeUTC(+m[1], +m[2], +m[3]);
 
   // yyyy-mm-dd or yyyy/mm/dd
@@ -33,10 +41,10 @@ export function parseExcelDate(value: unknown): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function makeUTC(y: number, mo: number, d: number): Date | null {
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-  const date = new Date(Date.UTC(y, mo - 1, d));
-  if (date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d) return null;
+function makeUTC(y: number, mo: number, d: number, hh = 0, mm = 0): Date | null {
+  if (mo < 1 || mo > 12 || d < 1 || d > 31 || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  const date = new Date(Date.UTC(y, mo - 1, d, hh, mm));
+  if (date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d || date.getUTCHours() !== hh || date.getUTCMinutes() !== mm) return null;
   return date;
 }
 
@@ -49,16 +57,23 @@ export function formatPODate(value: unknown): string | null {
   return `${y}${m}${d}`;
 }
 
+export function formatPODateTime(value: unknown): string | null {
+  const date = value instanceof Date ? value : parseExcelDate(value);
+  if (!date) return null;
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  // Spec requires 13-character datetime: yyyymmddhh:mm
+  return `${y}${m}${d}${hh}:${mm}`;
+}
+
 /** hh:mm */
 export function formatPOTime(date: Date = new Date()): string {
   const h = String(date.getUTCHours()).padStart(2, "0");
   const m = String(date.getUTCMinutes()).padStart(2, "0");
   return `${h}:${m}`;
-}
-
-/** yyyymmddhh:mm */
-export function formatPODateTime(date: Date = new Date()): string {
-  return `${formatPODate(date)}${formatPOTime(date)}`;
 }
 
 export function toNumber(value: unknown): number | null {
@@ -74,7 +89,14 @@ export function toNumber(value: unknown): number | null {
 export function formatInteger(value: unknown, width: number): string {
   const n = toNumber(value);
   const rounded = n === null ? 0 : Math.round(n);
-  return String(Math.abs(rounded)).padStart(width, "0").slice(-width);
+  const sign = rounded < 0 ? "-" : "";
+  const digits = String(Math.abs(rounded)).padStart(Math.max(0, width - sign.length), "0");
+  let result = sign + digits;
+  if (result.length > width) {
+    // Truncate from the left to keep rightmost digits (may remove sign if too small)
+    result = result.slice(-width);
+  }
+  return result;
 }
 
 /** Zero padded decimal with fixed decimals, e.g. 1409 -> "001409.000" */
@@ -84,8 +106,14 @@ export function formatDecimal(
   decimals: number,
 ): string {
   const n = toNumber(value) ?? 0;
-  const text = Math.abs(n).toFixed(decimals);
-  return text.padStart(width, "0").slice(-width);
+  const sign = n < 0 ? "-" : "";
+  const absText = Math.abs(n).toFixed(decimals);
+  const unsigned = absText.padStart(Math.max(0, width - sign.length), "0");
+  let result = sign + unsigned;
+  if (result.length > width) {
+    result = result.slice(-width);
+  }
+  return result;
 }
 
 /** Ensure a numeric-looking Excel value never renders as 1.23E+17. */
