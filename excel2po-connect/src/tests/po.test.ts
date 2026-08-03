@@ -559,7 +559,7 @@ describe("PO generation", () => {
             stockPool: "CE",
             shippedDate: "20260115",
             origCons: "OC12345678",
-            shipNumber: "200045",
+            shipNumber: "200045", 
             temperature: 2.5,
             comboPalletId: "000000001",
             tempDeviceId: "SENSITECH1234567890",
