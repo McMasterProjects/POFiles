@@ -211,7 +211,7 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
   w.put(182, 189, dateOrError(w, v.shiftDate, "shiftDate", 182, 189, row.excelRow), {
     field: "shiftDate",
   });
-  w.put(190, 195, get("orderNo"), { field: "orderNo" });
+  w.put(190, 195, "", { field: "orderNo" });
   w.put(196, 202, h.locationCode, { field: "locationCode" });
   w.put(203, 204, get("store"), { field: "store" });
   w.put(205, 206, get("stockPool"), { field: "stockPool" });

@@ -373,15 +373,6 @@ export const PALLET_FIELDS = [
     required: false,
   },
   {
-    key: "orderNo",
-    label: "Order Number",
-    recordType: "OP",
-    from: 190,
-    to: 195,
-    type: "alpha",
-    required: false,
-  },
-  {
     key: "store",
     label: "Store",
     recordType: "OP",

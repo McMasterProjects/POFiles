@@ -613,6 +613,7 @@ describe("PO generation", () => {
     expect(op).toBeDefined();
     expect(op!.slice(77, 79)).toBe("PF");
     expect(op!.slice(112, 116)).toBe("PICK");
+    expect(op!.slice(190, 195)).toBe("     ");
     expect(op!.slice(253, 254)).toBe("S");
     expect(op!.slice(313, 315)).toBe("CA");
     expect(op!.slice(599, 603)).toBe("2026");

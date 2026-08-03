@@ -118,7 +118,6 @@ const SYNONYMS: Record<PalletFieldKey, string[]> = {
   reason: ["reason"],
   shift: ["shift"],
   shiftDate: ["shift_date", "shift date"],
-  orderNo: ["order_no", "order no", "order number"],
   store: ["store"],
   stockPool: ["stock_pool", "stock pool"],
   shippedDate: ["shipped_date", "shipped date", "load out date"],
