@@ -551,6 +551,7 @@ describe("PO generation", () => {
             pickRef: "PICK",
             prodGrp: "PD",
             prodChar: "CHR",
+            
             remarks: "REMARKS",
             reason: "REAS",
             shift: "D",
