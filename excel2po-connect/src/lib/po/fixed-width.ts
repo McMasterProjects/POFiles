@@ -1,23 +1,12 @@
-/**
- * Fixed-width field helper.
- * Positions are 1-based and inclusive. All records are space-padded blanks
- * of a known length, and fields are written into exact character positions.
- */
 
 export type FieldAlign = "alpha" | "numeric";
 
 export interface FieldOptions {
-  /** alpha = left aligned + space padded, numeric = right aligned + zero padded */
   align?: FieldAlign;
-  /** allow silent truncation of alpha values that exceed the field width */
   allowTruncate?: boolean;
-  /** pad character override */
   pad?: string;
-  /** field name for error reporting */
   field?: string;
-  /** record type for error reporting */
   recordType?: string;
-  /** excel row for error reporting */
   excelRow?: number;
 }
 
@@ -71,6 +60,10 @@ export function setFixedWidthField(
   let raw = value === null || value === undefined ? "" : String(value);
   raw = raw.trim();
 
+  if (align === "alpha") {
+    raw = raw.replace(/[^A-Za-z0-9]/g, "");
+  }
+
   if (raw.length > width) {
     if (allowTruncate) {
       errors.push({
@@ -122,7 +115,6 @@ export function setFixedWidthField(
   return { buffer: next, errors };
 }
 
-/** Small builder that accumulates errors while writing fields. */
 export class RecordWriter {
   buffer: string;
   errors: FixedWidthError[] = [];

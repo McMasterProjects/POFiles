@@ -5,7 +5,6 @@ import {
   type POHeaderInput,
 } from "./types";
 
-/** Heuristic auto-mapping of Excel headers onto PO pallet fields. */
 const SYNONYMS: Record<PalletFieldKey, string[]> = {
   palletId: [
     "barcode",

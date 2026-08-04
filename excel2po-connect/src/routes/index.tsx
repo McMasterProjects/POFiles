@@ -162,15 +162,11 @@ function ConvertExcelPage() {
     const seq = String(header.sequenceNumber || header.batchNumber || "")
       .trim()
       .padStart(3, "0");
-    const source = String(header.sourceAddress || "000")
-      .trim()
-      .slice(0, 3)
-      .padEnd(3, "0");
     const destination = String(header.destinationAddress || "000")
       .trim()
       .slice(0, 3)
       .padEnd(3, "0");
-    return `PO${source}${seq}.${destination}`;
+    return `POMTS${seq}.${destination}`;
   }, [header]);
 
   const addLog = (message: string) =>

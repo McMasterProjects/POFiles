@@ -1,4 +1,3 @@
-/** Date, time and numeric formatting helpers for the PO layout. */
 
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
 
@@ -14,26 +13,20 @@ export function parseExcelDate(value: unknown): Date | null {
   const text = String(value).trim();
   if (!text) return null;
 
-  // Excel serial supplied as text
   if (/^\d{5}(\.\d+)?$/.test(text)) return parseExcelDate(Number(text));
 
-  // yyyymmddhhmm
   let m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(text);
   if (m) return makeUTC(+m[1], +m[2], +m[3], +m[4], +m[5]);
 
-  // yyyymmddhh:mm
   m = /^(\d{4})(\d{2})(\d{2})(\d{2}):(\d{2})$/.exec(text);
   if (m) return makeUTC(+m[1], +m[2], +m[3], +m[4], +m[5]);
 
-  // yyyymmdd
   m = /^(\d{4})(\d{2})(\d{2})$/.exec(text);
   if (m) return makeUTC(+m[1], +m[2], +m[3]);
 
-  // yyyy-mm-dd or yyyy/mm/dd
   m = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(text);
   if (m) return makeUTC(+m[1], +m[2], +m[3]);
 
-  // dd/mm/yyyy or dd-mm-yyyy
   m = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/.exec(text);
   if (m) return makeUTC(+m[3], +m[2], +m[1]);
 
@@ -71,11 +64,9 @@ export function formatPODateTime(value: unknown): string | null {
   const d = String(date.getUTCDate()).padStart(2, "0");
   const hh = String(date.getUTCHours()).padStart(2, "0");
   const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  // Spec requires 13-character datetime: yyyymmddhh:mm
   return `${y}${m}${d}${hh}:${mm}`;
 }
 
-/** hh:mm */
 export function formatPOTime(date: Date = new Date()): string {
   const h = String(date.getUTCHours()).padStart(2, "0");
   const m = String(date.getUTCMinutes()).padStart(2, "0");
@@ -91,7 +82,6 @@ export function toNumber(value: unknown): number | null {
   return isFinite(n) ? n : null;
 }
 
-/** Zero padded integer, e.g. formatInteger(40, 5) -> "00040" */
 export function formatInteger(value: unknown, width: number): string {
   const n = toNumber(value);
   const rounded = n === null ? 0 : Math.round(n);
@@ -99,13 +89,11 @@ export function formatInteger(value: unknown, width: number): string {
   const digits = String(Math.abs(rounded)).padStart(Math.max(0, width - sign.length), "0");
   let result = sign + digits;
   if (result.length > width) {
-    // Truncate from the left to keep rightmost digits (may remove sign if too small)
     result = result.slice(-width);
   }
   return result;
 }
 
-/** Zero padded decimal with fixed decimals, e.g. 1409 -> "001409.000" */
 export function formatDecimal(value: unknown, width: number, decimals: number): string {
   const n = toNumber(value) ?? 0;
   const sign = n < 0 ? "-" : "";
@@ -118,7 +106,6 @@ export function formatDecimal(value: unknown, width: number, decimals: number): 
   return result;
 }
 
-/** Ensure a numeric-looking Excel value never renders as 1.23E+17. */
 export function toPlainText(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "number") {

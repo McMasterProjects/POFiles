@@ -1,6 +1,3 @@
-/** In-memory server-side storage for uploads, conversions, logs and profiles.
- * File content is kept in backend storage, never returned to the client
- * except through the explicit preview/download endpoints. */
 import type { ColumnMapping, LogEntry, POHeaderInput, ValidationIssue } from "./types";
 
 export interface UploadRecord {

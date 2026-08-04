@@ -89,6 +89,12 @@ describe("fixed-width helper", () => {
 
     expect(writer.done().line.length).toBe(20);
   });
+
+  it("removes special characters from alpha values before writing them", () => {
+    const { buffer } = setFixedWidthField(blankLine(8), 1, 8, "AB-12/3");
+
+    expect(buffer).toBe("AB123   ");
+  });
 });
 
 describe("formatting", () => {
@@ -475,8 +481,8 @@ describe("PO generation", () => {
 
     expect(bh.slice(2, 5)).toBe("MTS");
     expect(bh.slice(5, 11)).toBe("000001");
-    expect(oh.slice(2, 12)).toBe("MTS-000001");
-    expect(oh.slice(12, 22)).toBe("MTS-000001");
+    expect(oh.slice(2, 12).trim()).toBe("MTS000001");
+    expect(oh.slice(12, 22).trim()).toBe("MTS000001");
   });
 
   it("generates exact record lengths", () => {
@@ -763,7 +769,7 @@ describe("PO generation", () => {
 
     expect(op).toBeDefined();
     expect(bad.errors.some((error) => error.code === "INVALID_DATE")).toBe(false);
-    expect(op!.slice(206, 219)).toBe("2026072320:10");
+    expect(op!.slice(206, 219).trim()).toBe("202607232010");
   });
 
   it("flags an over-long container number", () => {

@@ -1,4 +1,3 @@
-/** Backend orchestration for the Excel → PO conversion pipeline. */
 import { inspectWorkbook, readSheetRows } from "./excel.server";
 import { applyMapping, suggestHeaderValues, suggestMapping } from "./mapping";
 import { generatePOFile, getNextSequenceNumber } from "./generator";

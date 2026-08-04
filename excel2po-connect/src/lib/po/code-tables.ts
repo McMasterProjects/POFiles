@@ -1,4 +1,3 @@
-/** Descriptive text -> Paltrack code translation tables. */
 
 export const CODE_TABLES: Record<string, Record<string, string>> = {
   country: {
@@ -24,10 +23,6 @@ export interface CodeLookupResult {
   unknown: boolean;
 }
 
-/**
- * Translate a descriptive Excel value into a code.
- * Values already short enough for the field are passed through untouched.
- */
 export function lookupCode(
   table: keyof typeof CODE_TABLES | string,
   raw: unknown,
@@ -42,6 +37,5 @@ export function lookupCode(
 
   if (text.length <= maxLength) return { value: text.toUpperCase(), unknown: false };
 
-  // Descriptive text that does not fit and has no mapping.
   return { value: "", unknown: true };
 }

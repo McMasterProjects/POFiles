@@ -28,7 +28,6 @@ export interface POHeaderInput {
   fileName?: string;
 }
 
-/** Canonical PO pallet fields that can be mapped from Excel columns. */
 export const PALLET_FIELDS = [
   {
     key: "palletId",
@@ -808,7 +807,6 @@ export const PALLET_FIELDS = [
 
 export type PalletFieldKey = (typeof PALLET_FIELDS)[number]["key"];
 
-/** mapping: PO field key -> Excel header name */
 export type ColumnMapping = Partial<Record<PalletFieldKey, string>>;
 
 export interface PalletRow {

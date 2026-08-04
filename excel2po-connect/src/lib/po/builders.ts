@@ -81,7 +81,6 @@ export function buildOHRecord(ctx: Ctx, palletCount: number, cartonCount: number
   w.put(13, 22, h.loadReference?.trim() || ctx.loadId, { field: "loadReference" });
   w.put(23, 47, h.loadReference?.trim() || ctx.loadId, { field: "loadName" });
   w.put(48, 48, "R", { field: "transportMode" });
-  // Per spec: transport (R), load_type (F=flat-bed or R=reefer), load_status (P planning, etc.)
   w.put(49, 49, h.loadType || "F", { field: "loadType" });
   w.put(50, 50, h.loadStatus || "P", { field: "loadStatus" });
   w.num(134, 138, formatInteger(palletCount, 5), { field: "palletCount" });
@@ -324,7 +323,6 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
   w.put(643, 644, get("protocolExceptionIndicator"), { field: "protocolExceptionIndicator" });
   w.put(645, 669, get("upn"), { field: "upn", allowTruncate: true });
   w.put(670, 699, get("palletTreatment"), { field: "palletTreatment", allowTruncate: true });
-  // Per spec: pallet_gross_mass is carried only on the first sequence of a pallet
   if (sequence === 1) {
     w.num(700, 709, formatDecimal(v.grossMass, 10, 3), { field: "palletGrossMass" });
   } else {

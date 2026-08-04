@@ -32,13 +32,13 @@ export function getNextSequenceNumber(header: POHeaderInput, previousCount = 0):
       .padStart(3, "0");
   }
 
-  const baseSequence =
-    String(header.sequenceNumber ?? "").trim() || String(header.batchNumber ?? "").trim() || "1";
+  const baseSequence = String(header.sequenceNumber ?? "").trim();
+  const parsedBase = Number.parseInt(baseSequence, 10);
+  const start = Number.isNaN(parsedBase) ? 1 : Math.max(parsedBase, 1);
+  const next = start + previousCount;
+  const wrapped = ((next - 1) % 999) + 1;
 
-  const parsed = Number.parseInt(baseSequence, 10);
-  const next = Number.isNaN(parsed) ? 1 : parsed + previousCount;
-
-  return String(next).padStart(3, "0");
+  return String(wrapped).padStart(3, "0");
 }
 
 export function buildFileName(header: POHeaderInput, sequenceOverride?: string): string {
@@ -47,30 +47,18 @@ export function buildFileName(header: POHeaderInput, sequenceOverride?: string):
   }
 
   const seq = (sequenceOverride ?? getNextSequenceNumber(header)).padStart(3, "0");
+  const destination = getDestinationSuffix(header);
 
-  const prefix = "PO";
-
-  const source = String(header.sourceAddress || "000")
-    .trim()
-    .slice(0, 3)
-    .padEnd(3, "0");
-
-  const destination = String(header.destinationAddress || "000")
-    .trim()
-    .slice(0, 3)
-    .padEnd(3, "0");
-
-  return `${prefix}${source}${seq}.${destination}`;
+  return `POMTS${seq}.${destination}`;
 }
 
-/**
- * Creates a randomized list of sequence numbers.
- *
- * Example for five rows:
- * [1, 3, 5, 2, 4]
- *
- * Every number from 1 to the row count is included once.
- */
+function getDestinationSuffix(header: POHeaderInput): string {
+  return String(header.destinationAddress || "000")
+    .trim()
+    .slice(0, 3)
+    .padEnd(3, "0");
+}
+
 export function createRandomSequenceNumbers(count: number): number[] {
   const sequenceNumbers = Array.from({ length: count }, (_, index) => index + 1);
 
@@ -86,13 +74,6 @@ export function createRandomSequenceNumbers(count: number): number[] {
   return sequenceNumbers;
 }
 
-/**
- * Returns the barcode used for grouping rows.
- *
- * SSCC is used first.
- * If the SSCC is blank, the pallet ID is used.
- * If both are blank, the row is treated as unique.
- */
 function getBarcodeKey(row: PalletRow, index: number): string {
   const sscc = String(row.values.sscc ?? "").trim();
 
@@ -101,14 +82,6 @@ function getBarcodeKey(row: PalletRow, index: number): string {
   return sscc || palletId || `__row__${index}`;
 }
 
-/**
- * Assigns sequence numbers to all rows.
- *
- * Repeated barcodes receive a randomized sequence containing
- * every number from 1 to the number of repeated rows.
- *
- * Unique barcodes always receive sequence 1.
- */
 export function assignRandomSequenceNumbers(rows: PalletRow[]): number[] {
   const barcodeGroups = new Map<string, number[]>();
 
@@ -217,7 +190,6 @@ export function generatePOFile(input: {
   const opCount = rows.length;
   const okCount = Number(includeOK);
 
-  // BH + OH + OL + optional OK + OC + OP + BT rows
   const recordCount = 5 + okCount + opCount;
 
   records.push(

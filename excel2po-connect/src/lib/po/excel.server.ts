@@ -1,6 +1,3 @@
-/** Excel reading (server-only). Uses SheetJS with text formatting so that
- * long numeric codes such as SSCC keep leading zeroes and never become
- * scientific notation. */
 import * as XLSX from "xlsx";
 
 export interface SheetInfo {
