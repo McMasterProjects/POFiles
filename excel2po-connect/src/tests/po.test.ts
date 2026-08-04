@@ -12,7 +12,12 @@ import {
 } from "../lib/po/format";
 import { buildFileName, generatePOFile, CRLF, getNextSequenceNumber } from "../lib/po/generator";
 import { RECORD_LENGTHS } from "../lib/po/builders";
-import { getMappingOptionLabel, resolveBackendMapping, suggestMapping } from "../lib/po/mapping";
+import {
+  getMappingOptionLabel,
+  resolveBackendMapping,
+  suggestMapping,
+  suggestHeaderValues,
+} from "../lib/po/mapping";
 import type { POHeaderInput } from "../lib/po/types";
 
 const header: POHeaderInput = {
@@ -191,6 +196,38 @@ describe("backend mapping", () => {
       "Actual Gross Weight — Pallet Gross Mass",
     );
     expect(getMappingOptionLabel("Country", "country")).toBe("Country");
+  });
+
+  it("suggests PO header values for load and location fields", () => {
+    const headers = [
+      "Load ID",
+      "Load Reference",
+      "Location Code",
+      "Seal Number",
+      "Organisation Code",
+      "Stuff Date",
+      "Container Number",
+    ];
+    const previewRows = [
+      {
+        "Load ID": "LOAD123",
+        "Load Reference": "REF123",
+        "Location Code": "CPT0001",
+        "Seal Number": "ZA123456",
+        "Organisation Code": "GG",
+        "Stuff Date": "20260114",
+        "Container Number": "MSDU9721477",
+      },
+    ];
+
+    const suggested = suggestHeaderValues(headers, previewRows);
+
+    expect(suggested.loadId).toBe("LOAD123");
+    expect(suggested.loadReference).toBe("REF123");
+    expect(suggested.locationCode).toBe("CPT0001");
+    expect(suggested.sealNumber).toBe("ZA123456");
+    expect(suggested.organisationCode).toBe("GG");
+    expect(suggested.stuffingDate).toBe("20260114");
   });
 
   it("maps the supplied warehouse headers when they are present", () => {

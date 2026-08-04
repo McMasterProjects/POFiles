@@ -208,6 +208,20 @@ export function suggestMapping(headers: string[]): ColumnMapping {
 
 const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
   containerNumber: ["container number", "container no", "container", "cntr no"],
+  loadId: ["load id", "loadid", "load number", "load no"],
+  loadReference: ["load reference", "load ref", "load_reference", "load_ref"],
+  locationCode: ["location code", "location", "locn code", "locn_code", "location_code"],
+  sealNumber: ["seal number", "seal no", "seal_number", "seal_no"],
+  organisationCode: [
+    "organisation code",
+    "organization code",
+    "organisation",
+    "organization",
+    "org code",
+    "org_code",
+    "org_code",
+  ],
+  stuffingDate: ["stuffing date", "stuff date", "stuffing_date", "stuff_date"],
 };
 
 export function suggestHeaderValues(headers: string[], previewRows: Record<string, string>[]) {

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Upload,
   CheckCircle2,
-  FileCog,
+  File,
   Download,
   FileText,
   Eraser,
@@ -352,7 +352,7 @@ function ConvertExcelPage() {
         <CommandButton icon={CheckCircle2} onClick={runValidate} disabled={!inspection || !!busy}>
           Validate
         </CommandButton>
-        <CommandButton icon={FileCog} onClick={runGenerate} disabled={!inspection || !!busy}>
+        <CommandButton icon={File} onClick={runGenerate} disabled={!inspection || !!busy}>
           Generate PO
         </CommandButton>
         <CommandButton
