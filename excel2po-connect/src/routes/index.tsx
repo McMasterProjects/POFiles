@@ -333,7 +333,7 @@ function ConvertExcelPage() {
           Upload Excel
         </CommandButton>
         <CommandButton
-          icon={Beaker}
+          icon={File}
           onClick={() => {
             setHeader({
               ...emptyHeader,
