@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { ColumnMapping, POHeaderInput } from "./types";
 
-const headerSchema = z.object({
+export const headerSchema = z.object({
   sourceAddress: z.string().min(1).max(3),
   destinationAddress: z.string().max(3).default("000"),
   sequenceNumber: z.string().max(10).default(""),
@@ -26,7 +26,7 @@ const headerSchema = z.object({
   fileName: z.string().max(60).optional(),
 });
 
-const conversionInput = z.object({
+export const conversionInput = z.object({
   uploadId: z.string().min(1),
   sheetName: z.string().min(1),
   mapping: z.record(z.string(), z.string().optional()),
