@@ -207,11 +207,51 @@ export function suggestMapping(headers: string[]): ColumnMapping {
 }
 
 const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
-  containerNumber: ["container number", "container no", "container", "cntr no"],
-  loadId: ["load id", "loadid", "load number", "load no"],
-  loadReference: ["load reference", "load ref", "load_reference", "load_ref"],
-  locationCode: ["location code", "location", "locn code", "locn_code", "location_code"],
-  sealNumber: ["seal number", "seal no", "seal_number", "seal_no"],
+  containerNumber: [
+    "container number",
+    "container no",
+    "container",
+    "cntr no",
+    "container_number",
+    "container_no",
+  ],
+  loadId: [
+    "load id",
+    "loadid",
+    "load number",
+    "load no",
+    "load_number",
+    "load_no",
+    "loadnum",
+    "load num",
+  ],
+  loadReference: [
+    "load reference",
+    "load ref",
+    "load_reference",
+    "load_ref",
+    "load ref number",
+    "load reference number",
+    "loadref",
+  ],
+  locationCode: [
+    "location code",
+    "location",
+    "locn code",
+    "loc code",
+    "locn",
+    "location_code",
+    "locn_code",
+    "locationcode",
+    "location code",
+  ],
+  sealNumber: [
+    "seal number",
+    "seal no",
+    "seal_number",
+    "seal_no",
+    "seal",
+  ],
   organisationCode: [
     "organisation code",
     "organization code",
@@ -219,9 +259,18 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "organization",
     "org code",
     "org_code",
-    "org_code",
+    "org",
+    "orgn code",
+    "orgn_code",
   ],
-  stuffingDate: ["stuffing date", "stuff date", "stuffing_date", "stuff_date"],
+  stuffingDate: [
+    "stuffing date",
+    "stuff date",
+    "stuffing_date",
+    "stuff_date",
+    "stuffing",
+    "stuff date",
+  ],
 };
 
 export function suggestHeaderValues(headers: string[], previewRows: Record<string, string>[]) {
