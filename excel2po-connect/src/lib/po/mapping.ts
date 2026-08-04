@@ -281,9 +281,16 @@ export function suggestHeaderValues(headers: string[], previewRows: Record<strin
       .replace(/[^a-z0-9]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-  const preferredRow = previewRows.find((row) =>
-    Object.values(row).some((v) => v.trim().length > 0),
-  );
+
+  const HEADER_TOKEN_FALLBACK: Partial<Record<keyof POHeaderInput, string[]>> = {
+    loadId: ["load", "id"],
+    loadReference: ["load", "ref"],
+    locationCode: ["location"],
+    sealNumber: ["seal"],
+    organisationCode: ["organis", "org"],
+    stuffingDate: ["stuff", "date"],
+    containerNumber: ["container"],
+  };
 
   for (const field of Object.keys(HEADER_SYNONYMS) as Array<keyof POHeaderInput>) {
     const candidates = HEADER_SYNONYMS[field] ?? [];
@@ -291,11 +298,22 @@ export function suggestHeaderValues(headers: string[], previewRows: Record<strin
       headers.find((h) => candidates.some((c) => norm(h) === norm(c))) ??
       headers.find((h) =>
         candidates.some((c) => norm(h).includes(norm(c)) || norm(c).includes(norm(h))),
-      );
-    if (match && preferredRow) {
-      const value = String(preferredRow[match] ?? "").trim();
-      if (value) suggested[field] = value;
-    }
+      ) ??
+      headers.find((h) => {
+        const tokens = HEADER_TOKEN_FALLBACK[field];
+        return (
+          tokens !== undefined &&
+          tokens.every((token) => norm(h).includes(token))
+        );
+      });
+
+    if (!match) continue;
+
+    const value = previewRows
+      .map((row) => String(row[match] ?? "").trim())
+      .find((text) => text.length > 0);
+
+    if (value) suggested[field] = value;
   }
 
   return suggested;
