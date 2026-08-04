@@ -42,8 +42,12 @@ function Settings() {
   const [settings, setSettings] = useState(DEFAULTS);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(KEY);
-    if (stored) setSettings({ ...DEFAULTS, ...JSON.parse(stored) });
+    try {
+      const stored = window.localStorage.getItem(KEY);
+      if (stored) setSettings({ ...DEFAULTS, ...JSON.parse(stored) });
+    } catch {
+      // Ignore storage access issues during SSR or restricted environments.
+    }
   }, []);
 
   const set = (key: keyof typeof DEFAULTS, value: string | boolean) =>
@@ -119,7 +123,11 @@ function Settings() {
         <button
           className="mt-3 rounded-[2px] bg-primary px-3 py-1 text-[12.5px] text-primary-foreground hover:bg-primary/90"
           onClick={() => {
-            window.localStorage.setItem(KEY, JSON.stringify(settings));
+            try {
+              window.localStorage.setItem(KEY, JSON.stringify(settings));
+            } catch {
+              // Ignore storage errors in restricted environments.
+            }
             toast.success("Settings saved");
           }}
         >
