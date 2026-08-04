@@ -224,6 +224,9 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "load_no",
     "loadnum",
     "load num",
+    "booking no",
+    "booking number",
+    "booking id",
   ],
   loadReference: [
     "load reference",
@@ -233,6 +236,11 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "load ref number",
     "load reference number",
     "loadref",
+    "booking reference",
+    "booking ref",
+    "reference",
+    "ref no",
+    "ref number",
   ],
   locationCode: [
     "location code",
@@ -243,7 +251,10 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "location_code",
     "locn_code",
     "locationcode",
-    "location code",
+    "destination location",
+    "dest location",
+    "dest_locn",
+    "destloc",
   ],
   sealNumber: [
     "seal number",
@@ -251,6 +262,7 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "seal_number",
     "seal_no",
     "seal",
+    "seal no.",
   ],
   organisationCode: [
     "organisation code",
@@ -262,6 +274,8 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "org",
     "orgn code",
     "orgn_code",
+    "company code",
+    "client code",
   ],
   stuffingDate: [
     "stuffing date",
@@ -269,7 +283,11 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "stuffing_date",
     "stuff_date",
     "stuffing",
-    "stuff date",
+    "loading date",
+    "load date",
+    "departure date",
+    "load_date",
+    "loading_date",
   ],
 };
 
@@ -314,6 +332,55 @@ export function suggestHeaderValues(headers: string[], previewRows: Record<strin
       .find((text) => text.length > 0);
 
     if (value) suggested[field] = value;
+  }
+
+  return suggested;
+}
+
+export function suggestHeaderMappings(
+  headers: string[],
+  previewRows: Record<string, string>[],
+): Partial<Record<keyof POHeaderInput, string>> {
+  const suggested: Partial<Record<keyof POHeaderInput, string>> = {};
+  const norm = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const HEADER_TOKEN_FALLBACK: Partial<Record<keyof POHeaderInput, string[]>> = {
+    loadId: ["load", "id"],
+    loadReference: ["load", "ref"],
+    locationCode: ["location"],
+    sealNumber: ["seal"],
+    organisationCode: ["organis", "org"],
+    stuffingDate: ["stuff", "date"],
+    containerNumber: ["container"],
+  };
+
+  for (const field of Object.keys(HEADER_SYNONYMS) as Array<keyof POHeaderInput>) {
+    const candidates = HEADER_SYNONYMS[field] ?? [];
+    const match =
+      headers.find((h) => candidates.some((c) => norm(h) === norm(c))) ??
+      headers.find((h) =>
+        candidates.some((c) => norm(h).includes(norm(c)) || norm(c).includes(norm(h))),
+      ) ??
+      headers.find((h) => {
+        const tokens = HEADER_TOKEN_FALLBACK[field];
+        return (
+          tokens !== undefined &&
+          tokens.every((token) => norm(h).includes(token))
+        );
+      });
+
+    if (!match) continue;
+
+    const value = previewRows
+      .map((row) => String(row[match] ?? "").trim())
+      .find((text) => text.length > 0);
+
+    if (value) suggested[field] = match;
   }
 
   return suggested;
