@@ -77,6 +77,20 @@ The generated file must open correctly in Windows Notepad.
 
 Use Windows CRLF line endings.
 
+## Deployment
+
+This project can be deployed repeatedly to Vercel through GitHub Actions.
+
+### Required GitHub secrets
+
+Create these repository secrets in GitHub:
+
+- VERCEL_TOKEN
+- VERCEL_ORG_ID
+- VERCEL_PROJECT_ID
+
+Once configured, every push to the main branch will trigger a production deployment automatically.
+
 Do not generate CSV output.
 
 Do not separate fields with commas, tabs, semicolons or pipes.
