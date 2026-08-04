@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="flex w-56 shrink-0 flex-col bg-nav text-nav-foreground">
         <div className="flex h-11 items-center gap-2 border-b border-sidebar-border px-3 text-[13px] font-semibold">
           <FileSpreadsheet className="h-4 w-4" />
-          Excel to PO Converter
+          Paltrack Transmissions
         </div>
         <nav className="flex-1 py-1">
           {NAV.map((item) => {
