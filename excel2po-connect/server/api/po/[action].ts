@@ -13,23 +13,33 @@ function requireActionParam(event: any) {
   return action;
 }
 
+function requireNode(event: any) {
+  const node = event.node;
+  if (!node) {
+    throw createError({ statusCode: 500, statusMessage: "Runtime event node is unavailable." });
+  }
+  return node;
+}
+
 function allowCors(event: any) {
-  event.node.res.setHeader("Access-Control-Allow-Origin", "*");
-  event.node.res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  event.node.res.setHeader(
+  const node = requireNode(event);
+  node.res.setHeader("Access-Control-Allow-Origin", "*");
+  node.res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  node.res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, X-API-Key, Authorization",
   );
 }
 
 function requireApiKey(event: any) {
+  const node = requireNode(event);
   const expectedKey = process.env.APP_API_KEY;
   if (!expectedKey) {
     throw createError({ statusCode: 500, statusMessage: "Server missing API key configuration." });
   }
 
-  const headerKey = event.node.req.headers["x-api-key"] as string | undefined;
-  const authHeader = event.node.req.headers["authorization"] as string | undefined;
+  const headerKey = node.req.headers["x-api-key"] as string | undefined;
+  const authHeader = node.req.headers["authorization"] as string | undefined;
   const token =
     headerKey?.trim() ||
     (authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined);
@@ -43,12 +53,13 @@ export default defineEventHandler(async (event) => {
   allowCors(event);
   requireApiKey(event);
 
-  if (event.node.req.method === "OPTIONS") {
+  const node = requireNode(event);
+  if (node.req.method === "OPTIONS") {
     return { status: "ok" };
   }
 
   const action = requireActionParam(event);
-  const method = event.node.req.method;
+  const method = node.req.method;
 
   if (method === "GET") {
     switch (action) {
