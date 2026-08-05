@@ -4,6 +4,25 @@ import { generatePOFile, getNextSequenceNumber } from "./generator";
 import { logEvent, newId, pushLogs, store, type ConversionRecord } from "./store.server";
 import type { ColumnMapping, POHeaderInput, ValidationIssue } from "./types";
 
+function rowsToStringPreview(rows: Record<string, unknown>[]) {
+  return rows.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [key, String(value ?? "")]),
+    ),
+  );
+}
+
+function inferHeaderFromRows(headers: string[], rows: Record<string, unknown>[]) {
+  const previewRows = rowsToStringPreview(rows);
+  return suggestHeaderValues(headers, previewRows);
+}
+
+function mergeSuggestions<T extends object>(base: T, fallback: Partial<T>) {
+  return Object.fromEntries(
+    Object.entries(base).map(([key, value]) => [key, value ?? fallback[key as keyof T]]),
+  ) as T;
+}
+
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 export function handleUpload(input: {
@@ -90,9 +109,12 @@ export function runConversion(input: {
   const palletRows = applyMapping(rows, input.mapping, headers);
   logEvent(conversionId, "validation", "Validation started");
 
-  const sequenceNumber = getNextSequenceNumber(input.header, store.conversions.size);
+  const inferredHeaderValues = inferHeaderFromRows(headers, rows);
+  const headerWithInferredSeal = mergeSuggestions(input.header, inferredHeaderValues);
+
+  const sequenceNumber = getNextSequenceNumber(headerWithInferredSeal, store.conversions.size);
   const headerForGeneration = {
-    ...input.header,
+    ...headerWithInferredSeal,
     sequenceNumber,
   };
 
