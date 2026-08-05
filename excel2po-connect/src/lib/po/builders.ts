@@ -123,7 +123,7 @@ export function buildOKRecord(ctx: Ctx, palletCount: number): BuiltRecord {
   w.put(3, 12, ctx.loadId, { field: "loadId" });
   w.put(13, 19, h.locationCode, { field: "locationCode" });
   w.put(20, 30, h.containerNumber, { field: "containerNumber" });
-  w.put(31, 38, h.sealNumber, { field: "sealNumber" });
+  w.put(31, 45, h.sealNumber, { field: "sealNumber" });
   w.put(113, 119, h.locationCode, { field: "locationCode" });
   w.num(125, 129, formatInteger(palletCount, 5), { field: "palletCount" });
   w.put(159, 159, "T", { field: "containerType" });
