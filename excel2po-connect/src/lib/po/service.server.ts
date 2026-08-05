@@ -12,7 +12,7 @@ function rowsToStringPreview(rows: Record<string, unknown>[]) {
   );
 }
 
-function inferHeaderFromRows(headers: string[], rows: Record<string, unknown>[]) {
+export function inferHeaderFromRows(headers: string[], rows: Record<string, unknown>[]) {
   const previewRows = rowsToStringPreview(rows);
   return suggestHeaderValues(headers, previewRows);
 }

@@ -18,6 +18,7 @@ import {
   suggestMapping,
   suggestHeaderValues,
 } from "../lib/po/mapping";
+import { inferHeaderFromRows } from "../lib/po/service.server";
 import type { POHeaderInput } from "../lib/po/types";
 
 const header: POHeaderInput = {
@@ -234,6 +235,17 @@ describe("backend mapping", () => {
     expect(suggested.sealNumber).toBe("ZA123456");
     expect(suggested.organisationCode).toBe("GG");
     expect(suggested.stuffingDate).toBe("20260114");
+  });
+
+  it("infers sealNumber from row data when PO header input is blank", () => {
+    const headers = ["Seal Number", "Container Number", "Load ID"];
+    const rows = [
+      { "Seal Number": "ZA123456", "Container Number": "MSDU9721477", "Load ID": "LOAD123" },
+    ];
+
+    const inferred = inferHeaderFromRows(headers, rows);
+
+    expect(inferred.sealNumber).toBe("ZA123456");
   });
 
   it("maps the supplied warehouse headers when they are present", () => {

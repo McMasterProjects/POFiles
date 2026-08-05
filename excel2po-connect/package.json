@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "built": "npm run build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "deploy:vercel": "vercel --prod --confirm",
+    "deploy:vercel": "vercel --prod --yes",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
