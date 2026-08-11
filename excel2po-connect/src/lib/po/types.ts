@@ -531,7 +531,7 @@ export const PALLET_FIELDS = [
     from: 407,
     to: 426,
     type: "alpha",
-    required: false,
+    required: true,
   },
   {
     key: "waybillNo",

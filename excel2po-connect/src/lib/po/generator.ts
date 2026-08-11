@@ -147,15 +147,6 @@ export function generatePOFile(input: {
   const palletCount = rows.length;
   const records: BuiltRecord[] = [];
 
-  /*
-   * Unique barcodes receive sequence 1.
-   *
-   * Repeated barcodes receive a randomized set of sequence
-   * numbers from 1 to the number of repetitions.
-   *
-   * Example:
-   * 1, 3, 5, 2, 4
-   */
   const rowSequences = assignRandomSequenceNumbers(rows);
 
   records.push(buildBHRecord(ctx));

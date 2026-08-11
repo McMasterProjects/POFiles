@@ -83,7 +83,7 @@ const emptyHeader: POHeaderInput = {
   locationCode: "",
   containerNumber: "",
   sealNumber: "",
-  consignmentNumber: "",
+  consignmentNumber: "OPMT000465",
   organisationCode: "",
   countryCode: "ZA",
   channel: "E",
@@ -114,6 +114,27 @@ function toBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   }
   return btoa(binary);
+}
+
+function normalizeDateValue(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 8) return digits;
+  if (digits.length === 6) return digits;
+  if (digits.length === 7) return digits.slice(0, 4) + digits.slice(4);
+
+  return trimmed.slice(0, 8);
+}
+
+function normalizeHeaderForValidation(header: POHeaderInput): POHeaderInput {
+  return {
+    ...header,
+    stuffingDate: normalizeDateValue(header.stuffingDate ?? ""),
+    transactionDate: normalizeDateValue(header.transactionDate ?? ""),
+    transactionTime: (header.transactionTime ?? "").trim().slice(0, 5),
+  };
 }
 
 function ConvertExcelPage() {
@@ -205,7 +226,7 @@ function ConvertExcelPage() {
       uploadId: inspection.uploadId,
       sheetName: inspection.sheetName,
       mapping: mapping as Record<string, string | undefined>,
-      header: normalizedHeader,
+      header: normalizeHeaderForValidation(normalizedHeader),
     };
   };
 

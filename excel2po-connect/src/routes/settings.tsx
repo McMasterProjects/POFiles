@@ -45,9 +45,7 @@ function Settings() {
     try {
       const stored = window.localStorage.getItem(KEY);
       if (stored) setSettings({ ...DEFAULTS, ...JSON.parse(stored) });
-    } catch {
-      // Ignore storage access issues during SSR or restricted environments.
-    }
+    } catch {}
   }, []);
 
   const set = (key: keyof typeof DEFAULTS, value: string | boolean) =>
@@ -125,9 +123,7 @@ function Settings() {
           onClick={() => {
             try {
               window.localStorage.setItem(KEY, JSON.stringify(settings));
-            } catch {
-              // Ignore storage errors in restricted environments.
-            }
+            } catch {}
             toast.success("Settings saved");
           }}
         >

@@ -1,4 +1,5 @@
 import type { ColumnMapping, LogEntry, POHeaderInput, ValidationIssue } from "./types";
+import * as supaStore from './supabase-store.server';
 
 export interface UploadRecord {
   uploadId: string;
@@ -57,8 +58,40 @@ g.__poStore = created;
 export const store: POStore = created;
 
 export function pushLogs(entries: LogEntry[]) {
-  store.logs.push(...entries);
-  if (store.logs.length > 5000) store.logs.splice(0, store.logs.length - 5000);
+  void (async () => {
+    try {
+      const res = await supaStore.pushLogs(entries as any[]);
+      if (!res) {
+        store.logs.push(...entries);
+        if (store.logs.length > 5000) store.logs.splice(0, store.logs.length - 5000);
+      }
+    } catch (e) {
+      store.logs.push(...entries);
+      if (store.logs.length > 5000) store.logs.splice(0, store.logs.length - 5000);
+    }
+  })();
+}
+
+export async function saveUploadRecord(record: UploadRecord) {
+  try {
+    const res = await supaStore.saveUpload(record);
+    if (res) return res;
+  } catch (e) {
+    // ignore and fallback
+  }
+  store.uploads.set(record.uploadId, record);
+  return record;
+}
+
+export async function saveConversionRecord(record: ConversionRecord) {
+  try {
+    const res = await supaStore.saveConversion(record);
+    if (res) return res;
+  } catch (e) {
+    // ignore and fallback
+  }
+  store.conversions.set(record.id, record);
+  return record;
 }
 
 export function logEvent(
