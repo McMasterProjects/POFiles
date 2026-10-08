@@ -1,4 +1,3 @@
-
 export type FieldAlign = "alpha" | "numeric";
 
 export interface FieldOptions {
@@ -35,12 +34,7 @@ export function setFixedWidthField(
   options: FieldOptions = {},
 ): { buffer: string; errors: FixedWidthError[] } {
   const errors: FixedWidthError[] = [];
-  const {
-    align = "alpha",
-    field,
-    recordType,
-    excelRow,
-  } = options;
+  const { align = "alpha", field, recordType, excelRow } = options;
 
   const width = toPosition - fromPosition + 1;
 

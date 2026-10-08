@@ -26,11 +26,7 @@ import {
   suggestMapping,
   suggestHeaderValues,
 } from "../lib/po/mapping";
-import {
-  buildPODownloadSet,
-  handleUpload,
-  inferHeaderFromRows,
-} from "../lib/po/service.server";
+import { buildPODownloadSet, handleUpload, inferHeaderFromRows } from "../lib/po/service.server";
 import type { POHeaderInput } from "../lib/po/types";
 import { headerSchema } from "../lib/po/conversion.functions";
 import { hydrateConversionRecords, store } from "../lib/po/store.server";
@@ -80,9 +76,18 @@ const rows = [
 describe("legacy PO report helpers", () => {
   it("groups pallet rows by container and totals each container the way the report does", () => {
     const summary = summarizePalletGroups([
-      { excelRow: 2, values: { containerNumber: "C1", cartons: 12, palletQuantity: 3, grossMass: 100 } },
-      { excelRow: 3, values: { containerNumber: "C1", cartons: 8, palletQuantity: 2, grossMass: 50 } },
-      { excelRow: 4, values: { containerNumber: "C2", cartons: 15, palletQuantity: 4, grossMass: 80 } },
+      {
+        excelRow: 2,
+        values: { containerNumber: "C1", cartons: 12, palletQuantity: 3, grossMass: 100 },
+      },
+      {
+        excelRow: 3,
+        values: { containerNumber: "C1", cartons: 8, palletQuantity: 2, grossMass: 50 },
+      },
+      {
+        excelRow: 4,
+        values: { containerNumber: "C2", cartons: 15, palletQuantity: 4, grossMass: 80 },
+      },
     ] as any);
 
     expect(summary.groups.map((group) => group.container)).toEqual(["C1", "C2"]);
@@ -420,28 +425,30 @@ describe("record retention and export format", () => {
   });
 
   it("hydrates conversion records so dashboard data is not lost on refresh", () => {
-    const snapshot = [{
-      id: "CNV-REFRESH-01",
-      uploadId: "UPL-REFRESH-01",
-      status: "Completed",
-      sourceFileName: "sample.xlsx",
-      outputFileName: "POMTS001.00",
-      selectedSheet: "Sheet1",
-      totalRows: 2,
-      validRows: 2,
-      invalidRows: 0,
-      warningCount: 0,
-      recordCount: 3,
-      palletCount: 2,
-      cartonCount: 30,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-      content: "PO DATA",
-      errors: [],
-      warnings: [],
-      header: {},
-      mapping: {},
-    }];
+    const snapshot = [
+      {
+        id: "CNV-REFRESH-01",
+        uploadId: "UPL-REFRESH-01",
+        status: "Completed",
+        sourceFileName: "sample.xlsx",
+        outputFileName: "POMTS001.00",
+        selectedSheet: "Sheet1",
+        totalRows: 2,
+        validRows: 2,
+        invalidRows: 0,
+        warningCount: 0,
+        recordCount: 3,
+        palletCount: 2,
+        cartonCount: 30,
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        content: "PO DATA",
+        errors: [],
+        warnings: [],
+        header: {},
+        mapping: {},
+      },
+    ];
 
     hydrateConversionRecords(snapshot as any);
 
@@ -917,7 +924,7 @@ describe("PO generation", () => {
             pickRef: "PICK",
             prodGrp: "PD",
             prodChar: "CHR",
-            
+
             remarks: "REMARKS",
             reason: "REAS",
             shift: "D",
@@ -926,7 +933,7 @@ describe("PO generation", () => {
             stockPool: "CE",
             shippedDate: "2026/07/23",
             origCons: "OC12345678",
-            shipNumber: "200045", 
+            shipNumber: "200045",
             temperature: 2.5,
             comboPalletId: "000000001",
             tempDeviceId: "SENSITECH1234567890",

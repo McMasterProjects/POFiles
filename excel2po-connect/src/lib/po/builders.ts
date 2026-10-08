@@ -47,7 +47,7 @@ export function makeContext(header: POHeaderInput): Ctx {
   const sequenceValue = Number.parseInt(sequenceSource, 10);
   const normalizedSequence = Number.isNaN(sequenceValue)
     ? 1
-    : ((sequenceValue - 1) % 999 + 999) % 999 + 1;
+    : ((((sequenceValue - 1) % 999) + 999) % 999) + 1;
   const fileSequence = String(normalizedSequence).padStart(3, "0");
   const batchNumber = String(normalizedSequence).padStart(6, "0");
   const fromDepot = header.sourceAddress?.trim() || "000";
@@ -491,7 +491,6 @@ function dateTimeOrError(
   return formatted;
 }
 
-
 function shippedDateOrError(
   w: RecordWriter,
   raw: unknown,
@@ -500,11 +499,7 @@ function shippedDateOrError(
   to: number,
   excelRow?: number,
 ): string {
-  if (
-    raw === null ||
-    raw === undefined ||
-    String(raw).trim() === ""
-  ) {
+  if (raw === null || raw === undefined || String(raw).trim() === "") {
     return "";
   }
 
@@ -528,4 +523,3 @@ function shippedDateOrError(
 
   return formatted;
 }
-

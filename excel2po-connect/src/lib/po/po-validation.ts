@@ -25,7 +25,11 @@ export function validatePO(parsed: ParsedPOFile): POValidationResult {
   const add = (issue: POValidationIssue) => issues.push(issue);
 
   if (!parsed.records.length) {
-    add({ code: "EMPTY_FILE", severity: "error", message: "The uploaded file contains no PO records." });
+    add({
+      code: "EMPTY_FILE",
+      severity: "error",
+      message: "The uploaded file contains no PO records.",
+    });
   }
 
   parsed.records.forEach((record) => {
@@ -59,7 +63,11 @@ export function validatePO(parsed: ParsedPOFile): POValidationResult {
     add({ code: "MISSING_BT", severity: "error", message: "The PO file is missing a BT record." });
   }
   if (!parsed.pallets.length) {
-    add({ code: "MISSING_OP", severity: "warning", message: "The PO file contains no OP pallet records." });
+    add({
+      code: "MISSING_OP",
+      severity: "warning",
+      message: "The PO file contains no OP pallet records.",
+    });
   }
   if (parsed.lineEnding !== "CRLF") {
     add({
@@ -94,7 +102,10 @@ export function validatePO(parsed: ParsedPOFile): POValidationResult {
   };
 }
 
-export function parseAndValidatePO(text: string): { parsed: ParsedPOFile; validation: POValidationResult } {
+export function parseAndValidatePO(text: string): {
+  parsed: ParsedPOFile;
+  validation: POValidationResult;
+} {
   const parsed = parsePOText(text);
   return { parsed, validation: validatePO(parsed) };
 }

@@ -1,4 +1,3 @@
-
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
 
 export function parseExcelDate(value: unknown): Date | null {
@@ -34,23 +33,8 @@ export function parseExcelDate(value: unknown): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function makeUTC(
-  y: number,
-  mo: number,
-  d: number,
-  hh = 0,
-  mm = 0
-): Date | null {
-  if (
-    mo < 1 ||
-    mo > 12 ||
-    d < 1 ||
-    d > 31 ||
-    hh < 0 ||
-    hh > 23 ||
-    mm < 0 ||
-    mm > 59
-  ) {
+function makeUTC(y: number, mo: number, d: number, hh = 0, mm = 0): Date | null {
+  if (mo < 1 || mo > 12 || d < 1 || d > 31 || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
     return null;
   }
 
@@ -132,27 +116,17 @@ export function formatInteger(value: unknown, width: number): string {
   const n = toNumber(value);
   const rounded = n === null ? 0 : Math.round(n);
   const sign = rounded < 0 ? "-" : "";
-  const digits = String(Math.abs(rounded)).padStart(
-    Math.max(0, width - sign.length),
-    "0"
-  );
+  const digits = String(Math.abs(rounded)).padStart(Math.max(0, width - sign.length), "0");
 
   const result = sign + digits;
   return result;
 }
 
-export function formatDecimal(
-  value: unknown,
-  width: number,
-  decimals: number
-): string {
+export function formatDecimal(value: unknown, width: number, decimals: number): string {
   const n = toNumber(value) ?? 0;
   const sign = n < 0 ? "-" : "";
   const absText = Math.abs(n).toFixed(decimals);
-  const unsigned = absText.padStart(
-    Math.max(0, width - sign.length),
-    "0"
-  );
+  const unsigned = absText.padStart(Math.max(0, width - sign.length), "0");
 
   const result = sign + unsigned;
   return result;
@@ -200,10 +174,12 @@ export function isValidSSCC(value: string): boolean {
 
 export function validateAndFormatSSCC(
   barcodeOrSSCC: unknown,
-  organisationCode: unknown
+  organisationCode: unknown,
 ): SSCCValidationResult {
   const sscc = String(barcodeOrSSCC ?? "").trim();
-  const organisation = String(organisationCode ?? "").trim().toUpperCase();
+  const organisation = String(organisationCode ?? "")
+    .trim()
+    .toUpperCase();
 
   if (!sscc) {
     return {
@@ -270,10 +246,7 @@ export function processPalletRows(rows: PalletRow[]): {
   for (const row of rows) {
     const originalSSCC = row.sscc ?? row.barcode;
 
-    const result = validateAndFormatSSCC(
-      originalSSCC,
-      row.organisationCode
-    );
+    const result = validateAndFormatSSCC(originalSSCC, row.organisationCode);
 
     if (!result.success) {
       errors.push({

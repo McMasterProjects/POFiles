@@ -2,12 +2,7 @@ import type { FixedWidthError } from "./fixed-width";
 
 export type ValidationIssue = FixedWidthError;
 export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export type AppSettingsState = Record<string, JsonValue>;
 export interface POHeaderInput {
@@ -23,7 +18,7 @@ export interface POHeaderInput {
   containerNumber: string;
   sealNumber: string;
   consignmentNumber: string;
-  organisationCode: string; 
+  organisationCode: string;
   countryCode: string;
   channel: string;
   destinationType: string;

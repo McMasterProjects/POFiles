@@ -41,10 +41,7 @@ import { buildPODownloadSet } from "@/lib/po/service.server";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [
-      { title: "Excel to PO" },
-      { property: "og:title", content: "Excel to PO" },
-    ],
+    meta: [{ title: "Excel to PO" }, { property: "og:title", content: "Excel to PO" }],
   }),
   component: ConvertExcelPage,
 });
@@ -362,9 +359,7 @@ function ConvertExcelPage() {
 
   return (
     <AppShell>
-      <PageTitle
-        title="Excel to PO"
-          />
+      <PageTitle title="Excel to PO" />
 
       <CommandBar>
         <CommandButton icon={Upload} onClick={() => fileRef.current?.click()} primary>
@@ -815,4 +810,3 @@ function Td({ children, className = "" }: { children?: React.ReactNode; classNam
 function Empty() {
   return <p className="text-[12.5px] text-muted-foreground">Upload an Excel file to continue.</p>;
 }
-

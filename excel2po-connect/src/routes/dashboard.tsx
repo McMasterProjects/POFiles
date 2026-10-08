@@ -32,7 +32,11 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { data = [], isLoading, refetch } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["conversions"],
     queryFn: () => listConversionsFn(),
   });
@@ -51,7 +55,9 @@ function Dashboard() {
     cartonCount: Number(c?.cartonCount ?? 0),
   }));
 
-  const [activeFilter, setActiveFilter] = useState<"all" | "today" | "successful" | "failed" | "validation">("all");
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "today" | "successful" | "failed" | "validation"
+  >("all");
   const filterLabel =
     activeFilter === "all"
       ? "all"
@@ -116,9 +122,7 @@ function Dashboard() {
     <AppShell>
       <div className="space-y-4">
         {/* Breadcrumb */}
-        <Breadcrumb
-          items={[{ label: "Home", href: "/" }, { label: "Dashboard" }]}
-        />
+        <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Dashboard" }]} />
 
         {/* Page Header */}
         <PageHeader
@@ -174,7 +178,8 @@ function Dashboard() {
         <Section title="Recent Conversions" collapsible={false}>
           <div className="mb-3 flex items-center justify-between gap-2">
             <span className="text-[12px] text-muted-foreground">
-              Filter: <span className="font-semibold capitalize text-foreground">{filterLabel}</span>
+              Filter:{" "}
+              <span className="font-semibold capitalize text-foreground">{filterLabel}</span>
             </span>
             {activeFilter !== "all" ? (
               <button
@@ -188,34 +193,35 @@ function Dashboard() {
           </div>
           {filteredData.length === 0 && !isLoading ? (
             <div className="rounded border border-dashed border-border bg-muted p-4 text-[12.5px] text-muted-foreground">
-              No saved records for this filter yet. Upload an Excel file and generate a PO to populate the dashboard.
+              No saved records for this filter yet. Upload an Excel file and generate a PO to
+              populate the dashboard.
             </div>
           ) : (
             <DataTable
-            columns={[
-              { key: "id", header: "Conversion ID", width: "120px" },
-              { key: "sourceFileName", header: "Source File", width: "200px" },
-              { key: "outputFileName", header: "Output File", width: "200px" },
-              { key: "status", header: "Status", width: "120px" },
-              { key: "palletCount", header: "Pallets", width: "80px" },
-              { key: "cartonCount", header: "Cartons", width: "80px" },
-              { key: "createdAt", header: "Date", width: "150px" },
-            ]}
+              columns={[
+                { key: "id", header: "Conversion ID", width: "120px" },
+                { key: "sourceFileName", header: "Source File", width: "200px" },
+                { key: "outputFileName", header: "Output File", width: "200px" },
+                { key: "status", header: "Status", width: "120px" },
+                { key: "palletCount", header: "Pallets", width: "80px" },
+                { key: "cartonCount", header: "Cartons", width: "80px" },
+                { key: "createdAt", header: "Date", width: "150px" },
+              ]}
               data={filteredData.slice(0, 10).map((c) => ({
                 id: c.id,
                 sourceFileName: c.sourceFileName,
                 outputFileName: c.outputFileName,
                 status: (
-                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${
-                    c.status === "Completed"
-                      ? "text-status-valid"
-                      : "text-status-error"
-                  }`}>
-                    <span className={`h-2 w-2 rounded-full ${
-                      c.status === "Completed"
-                        ? "bg-status-valid"
-                        : "bg-status-error"
-                    }`} />
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-medium ${
+                      c.status === "Completed" ? "text-status-valid" : "text-status-error"
+                    }`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        c.status === "Completed" ? "bg-status-valid" : "bg-status-error"
+                      }`}
+                    />
                     {c.status}
                   </span>
                 ),
@@ -251,7 +257,12 @@ function Dashboard() {
             <div className="rounded-sm border border-border bg-muted p-3">
               <p className="text-xs font-semibold text-muted-foreground">Avg Records/Conversion</p>
               <p className="mt-1 text-2xl font-bold text-foreground">
-                {normalizedData.length ? Math.round(normalizedData.reduce((s, c) => s + (Number(c.palletCount) || 0), 0) / normalizedData.length) : 0}
+                {normalizedData.length
+                  ? Math.round(
+                      normalizedData.reduce((s, c) => s + (Number(c.palletCount) || 0), 0) /
+                        normalizedData.length,
+                    )
+                  : 0}
               </p>
             </div>
           </div>

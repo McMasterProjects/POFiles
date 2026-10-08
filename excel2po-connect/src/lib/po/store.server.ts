@@ -1,5 +1,11 @@
-import type { AppSettingsState, ColumnMapping, LogEntry, POHeaderInput, ValidationIssue } from "./types";
-import * as supaStore from './supabase-store.server';
+import type {
+  AppSettingsState,
+  ColumnMapping,
+  LogEntry,
+  POHeaderInput,
+  ValidationIssue,
+} from "./types";
+import * as supaStore from "./supabase-store.server";
 
 export interface UploadRecord {
   uploadId: string;

@@ -1,4 +1,3 @@
-
 export const CODE_TABLES: Record<string, Record<string, string>> = {
   country: {
     "south africa": "ZA",

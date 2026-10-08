@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { handleUpload, inspectSheet, runConversion, requireConversion, buildValidationReport } from "../../../lib/po/service.server";
+import {
+  handleUpload,
+  inspectSheet,
+  runConversion,
+  requireConversion,
+  buildValidationReport,
+} from "../../../lib/po/service.server";
 import { store, newId } from "../../../lib/po/store.server";
 import { conversionInput } from "../../../lib/po/conversion.functions";
 import type { MappingProfile } from "../../../lib/po/store.server";
@@ -96,7 +102,9 @@ async function readBody(event: ApiEvent): Promise<unknown> {
 
   return new Promise((resolve, reject) => {
     let raw = "";
-    request.on("data", (chunk: any) => { raw += chunk.toString(); });
+    request.on("data", (chunk: any) => {
+      raw += chunk.toString();
+    });
     request.on("end", () => {
       if (!raw) return resolve(undefined);
       try {
@@ -129,10 +137,7 @@ function allowCors(event: ApiEvent): void {
   const node = requireNode(event);
   node.res.setHeader("Access-Control-Allow-Origin", "*");
   node.res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  node.res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, X-API-Key, Authorization",
-  );
+  node.res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization");
 }
 
 function requireApiKey(event: ApiEvent): void {
@@ -239,7 +244,10 @@ export default defineEventHandler(async (event: ApiEvent) => {
       }
 
       case "profiles": {
-        const schema = z.object({ name: z.string().min(1).max(60), mapping: z.record(z.string(), z.string().optional()) });
+        const schema = z.object({
+          name: z.string().min(1).max(60),
+          mapping: z.record(z.string(), z.string().optional()),
+        });
         const data = schema.parse(body);
         const profile: MappingProfile = {
           id: newId("MAP"),

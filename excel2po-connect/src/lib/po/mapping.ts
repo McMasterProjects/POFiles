@@ -240,14 +240,7 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "dest_locn",
     "destloc",
   ],
-  sealNumber: [
-    "seal number",
-    "seal no",
-    "seal_number",
-    "seal_no",
-    "seal",
-    "seal no.",
-  ],
+  sealNumber: ["seal number", "seal no", "seal_number", "seal_no", "seal", "seal no."],
   organisationCode: [
     "organisation code",
     "organization code",
@@ -307,10 +300,7 @@ export function suggestHeaderValues(headers: string[], previewRows: Record<strin
       ) ??
       headers.find((h) => {
         const tokens = HEADER_TOKEN_FALLBACK[field];
-        return (
-          tokens !== undefined &&
-          tokens.every((token) => norm(h).includes(token))
-        );
+        return tokens !== undefined && tokens.every((token) => norm(h).includes(token));
       });
 
     if (!match) continue;
@@ -320,8 +310,7 @@ export function suggestHeaderValues(headers: string[], previewRows: Record<strin
       .find((text) => text.length > 0);
 
     if (value) {
-      suggested[field] =
-        field === "organisationCode" ? normalizeOrganisationCode(value) : value;
+      suggested[field] = field === "organisationCode" ? normalizeOrganisationCode(value) : value;
     }
   }
 
@@ -358,10 +347,7 @@ export function suggestHeaderMappings(
       ) ??
       headers.find((h) => {
         const tokens = HEADER_TOKEN_FALLBACK[field];
-        return (
-          tokens !== undefined &&
-          tokens.every((token) => norm(h).includes(token))
-        );
+        return tokens !== undefined && tokens.every((token) => norm(h).includes(token));
       });
 
     if (!match) continue;

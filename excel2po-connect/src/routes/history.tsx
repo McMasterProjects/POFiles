@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AppShell,
-  PageHeader,
-  Section,
-  DataTable,
-  Breadcrumb,
-} from "@/components/bc/shell";
+import { AppShell, PageHeader, Section, DataTable, Breadcrumb } from "@/components/bc/shell";
 import { listConversionsFn } from "@/lib/po/conversion.functions";
 
 export const Route = createFileRoute("/history")({
@@ -62,11 +56,11 @@ function History() {
               sourceFileName: c.sourceFileName,
               outputFileName: c.outputFileName,
               status: (
-                <span className={`text-xs font-medium ${
-                  c.status === "Completed"
-                    ? "text-status-valid"
-                    : "text-status-error"
-                }`}>
+                <span
+                  className={`text-xs font-medium ${
+                    c.status === "Completed" ? "text-status-valid" : "text-status-error"
+                  }`}
+                >
                   {c.status}
                 </span>
               ),
@@ -74,9 +68,7 @@ function History() {
               cartonCount: c.cartonCount,
               errorCount: c.errors.length,
               createdAt: new Date(c.createdAt).toLocaleString(),
-              completedAt: c.completedAt
-                ? new Date(c.completedAt).toLocaleString()
-                : "—",
+              completedAt: c.completedAt ? new Date(c.completedAt).toLocaleString() : "—",
             }))}
             loading={isLoading}
             empty="No conversions recorded yet."

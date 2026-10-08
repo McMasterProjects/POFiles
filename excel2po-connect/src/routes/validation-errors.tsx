@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AppShell,
-  PageHeader,
-  Section,
-  DataTable,
-  Breadcrumb,
-} from "@/components/bc/shell";
+import { AppShell, PageHeader, Section, DataTable, Breadcrumb } from "@/components/bc/shell";
 import { listConversionsFn } from "@/lib/po/conversion.functions";
 
 export const Route = createFileRoute("/validation-errors")({
@@ -41,7 +35,7 @@ function ValidationErrors() {
     <AppShell>
       <div className="space-y-4">
         <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Validation Errors" }]} />
-        
+
         <PageHeader
           title="Validation Errors"
           subtitle="All recorded validation issues across conversions"
@@ -63,11 +57,11 @@ function ValidationErrors() {
             ]}
             data={rows.map((r) => ({
               severity: (
-                <span className={`text-xs font-medium ${
-                  r.severity === "error"
-                    ? "text-status-error"
-                    : "text-status-warning"
-                }`}>
+                <span
+                  className={`text-xs font-medium ${
+                    r.severity === "error" ? "text-status-error" : "text-status-warning"
+                  }`}
+                >
                   {r.severity}
                 </span>
               ),

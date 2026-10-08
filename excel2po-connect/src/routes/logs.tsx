@@ -32,7 +32,11 @@ export const Route = createFileRoute("/logs")({
 });
 
 function Logs() {
-  const { data = [], refetch, isLoading } = useQuery({
+  const {
+    data = [],
+    refetch,
+    isLoading,
+  } = useQuery({
     queryKey: ["logs"],
     queryFn: () => listLogsFn(),
   });
@@ -50,7 +54,7 @@ function Logs() {
     <AppShell>
       <div className="space-y-4">
         <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "System Logs" }]} />
-        
+
         <PageHeader
           title="System Logs"
           subtitle="Processing logs for all conversions"
@@ -88,13 +92,15 @@ function Logs() {
             data={rows.map((l) => ({
               timestamp: l.timestamp,
               level: (
-                <span className={`text-xs font-medium ${
-                  l.level === "error"
-                    ? "text-status-error"
-                    : l.level === "warn"
-                      ? "text-status-warning"
-                      : "text-muted-foreground"
-                }`}>
+                <span
+                  className={`text-xs font-medium ${
+                    l.level === "error"
+                      ? "text-status-error"
+                      : l.level === "warn"
+                        ? "text-status-warning"
+                        : "text-muted-foreground"
+                  }`}
+                >
                   {l.level}
                 </span>
               ),

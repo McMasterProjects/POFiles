@@ -19,9 +19,7 @@ import type { ColumnMapping, POHeaderInput, ValidationIssue } from "./types";
 
 function rowsToStringPreview(rows: Record<string, unknown>[]) {
   return rows.map((row) =>
-    Object.fromEntries(
-      Object.entries(row).map(([key, value]) => [key, String(value ?? "")]),
-    ),
+    Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value ?? "")])),
   );
 }
 
@@ -32,7 +30,8 @@ export function inferHeaderFromRows(headers: string[], rows: Record<string, unkn
 
 export function buildPODownloadSet(fileName: string, content: string) {
   const baseName = fileName.replace(/\.[^.]+$/, "");
-  const normalized = content.endsWith("\r\n") || content.endsWith("\n") ? content : `${content}\r\n`;
+  const normalized =
+    content.endsWith("\r\n") || content.endsWith("\n") ? content : `${content}\r\n`;
 
   return {
     notepad: {

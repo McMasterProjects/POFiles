@@ -1,18 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import type {
-  AppSettingsState,
-  ColumnMapping,
-  JsonValue,
-  POHeaderInput,
-} from "./types";
+import type { AppSettingsState, ColumnMapping, JsonValue, POHeaderInput } from "./types";
 
-const trimToMax = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max);
+const trimToMax = (max: number) => z.string().trim().max(max);
 
 export const headerSchema = z.object({
   sourceAddress: trimToMax(3).default(""),
@@ -62,21 +53,17 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
   ]),
 );
 
-const appSettingsSchema: z.ZodType<AppSettingsState> = z.record(
-  z.string(),
-  jsonValueSchema,
-);
+const appSettingsSchema: z.ZodType<AppSettingsState> = z.record(z.string(), jsonValueSchema);
 
 export const uploadExcelFn = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: { fileName: string; fileSize: number; base64: string }) =>
-      z
-        .object({
-          fileName: z.string().min(1).max(200),
-          fileSize: z.number().int().positive(),
-          base64: z.string().min(1),
-        })
-        .parse(data),
+  .inputValidator((data: { fileName: string; fileSize: number; base64: string }) =>
+    z
+      .object({
+        fileName: z.string().min(1).max(200),
+        fileSize: z.number().int().positive(),
+        base64: z.string().min(1),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const { handleUpload } = await import("./service.server");
@@ -195,21 +182,16 @@ export const listMappingProfilesFn = createServerFn({
 });
 
 export const saveMappingProfileFn = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      name: string;
-      mapping: Record<string, string | undefined>;
-    }) =>
-      z
-        .object({
-          name: z.string().min(1).max(60),
-          mapping: z.record(z.string(), z.string().optional()),
-        })
-        .parse(data),
+  .inputValidator((data: { name: string; mapping: Record<string, string | undefined> }) =>
+    z
+      .object({
+        name: z.string().min(1).max(60),
+        mapping: z.record(z.string(), z.string().optional()),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
-    const { store, newId, saveMappingProfileRecord } =
-      await import("./store.server");
+    const { store, newId, saveMappingProfileRecord } = await import("./store.server");
 
     const now = new Date().toISOString();
 
@@ -247,16 +229,11 @@ export const deleteMappingProfileFn = createServerFn({ method: "POST" })
   });
 
 export const saveAppSettingsFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown): AppSettingsState =>
-    appSettingsSchema.parse(data),
-  )
+  .inputValidator((data: unknown): AppSettingsState => appSettingsSchema.parse(data))
   .handler(async ({ data }) => {
     const { saveSettingsState } = await import("./store.server");
 
-    const savedSettings = await saveSettingsState(
-      "po-converter-settings",
-      data,
-    );
+    const savedSettings = await saveSettingsState("po-converter-settings", data);
 
     return appSettingsSchema.parse(savedSettings);
   });

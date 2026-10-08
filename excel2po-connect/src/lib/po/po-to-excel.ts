@@ -155,7 +155,7 @@ export const STOCK_PALLET_HEADERS = [
   "PM Qty Reduced",
   "PM ID",
   "client_ref",
-  "Client Reference"
+  "Client Reference",
 ] as const;
 
 type LineSelector = { recordType: string; from: number; to: number };
@@ -279,14 +279,17 @@ function calculatedGrossWeight(pallet: ParsedPallet): string {
     return pallet.grossMass || "";
   }
 
-  return pallet.grossMass || String(
-    nettWeight + cartonQuantity * 0.65,
-  );
+  return pallet.grossMass || String(nettWeight + cartonQuantity * 0.65);
 }
 
-function readColumn(parsed: ParsedPOFile, pallet: ParsedPallet | null, header: (typeof STOCK_PALLET_HEADERS)[number], fileName: string): string {
+function readColumn(
+  parsed: ParsedPOFile,
+  pallet: ParsedPallet | null,
+  header: (typeof STOCK_PALLET_HEADERS)[number],
+  fileName: string,
+): string {
   if (header === "EDI File Name") return fileName;
-  
+
   // For pallet-specific data, read from the pallet object
   if (pallet) {
     if (header === "pallet_id") return pallet.palletId || "";
@@ -296,7 +299,7 @@ function readColumn(parsed: ParsedPOFile, pallet: ParsedPallet | null, header: (
     if (header === "Actual Gross Weight") return pallet.grossMass || calculatedGrossWeight(pallet);
     if (header === "Actual Nett Weight" || header === "mass") return pallet.nettMass || "";
   }
-  
+
   const layout = OP_COLUMNS[header];
   if (layout && layout.recordType === "OP" && pallet) {
     // For OP record fields, read from pallet
@@ -306,8 +309,11 @@ function readColumn(parsed: ParsedPOFile, pallet: ParsedPallet | null, header: (
     });
     if (field) return String(field[1]);
   }
-  
-  if (layout) return findRecord(parsed, layout.recordType).slice(layout.from - 1, layout.to).trim();
+
+  if (layout)
+    return findRecord(parsed, layout.recordType)
+      .slice(layout.from - 1, layout.to)
+      .trim();
   if (header === "stuff_date") return findRecord(parsed, "OC").slice(33, 41).trim();
   if (header === "seal_number") {
     const okRecord = findRecord(parsed, "OK");
@@ -328,24 +334,19 @@ const DATE_COLUMNS = new Set([
   "Orig_inspec_date",
 ]);
 
-const NUMBER_COLUMNS = new Set([
-  "seq_no",
-]);
+const NUMBER_COLUMNS = new Set(["seq_no"]);
 
 // These values must keep the numeric amount supplied by the PO file. Do not
 // round them to a fixed number of decimal places during the Excel conversion.
-const QUANTITY_COLUMNS = new Set([
-  "Calc Plt Qty",
-]);
+const QUANTITY_COLUMNS = new Set(["Calc Plt Qty"]);
 
-const DECIMAL_2_COLUMNS = new Set([
-  "Actual Gross Weight",
-  "Actual Nett Weight",
-  "mass",
-]);
+const DECIMAL_2_COLUMNS = new Set(["Actual Gross Weight", "Actual Nett Weight", "mass"]);
 
 function formatExcelValue(header: (typeof STOCK_PALLET_HEADERS)[number], value: string): string {
-  if ((header === "ctn_qty" || header === "plt_qty" || QUANTITY_COLUMNS.has(header)) && /^-?\d+(?:\.\d+)?$/.test(value)) {
+  if (
+    (header === "ctn_qty" || header === "plt_qty" || QUANTITY_COLUMNS.has(header)) &&
+    /^-?\d+(?:\.\d+)?$/.test(value)
+  ) {
     return String(Number(value).toFixed(2));
   }
   if (DECIMAL_2_COLUMNS.has(header) && /^-?\d+(?:\.\d+)?$/.test(value)) {
@@ -381,10 +382,7 @@ function calculateSequenceNumbers(pallets: ParsedPallet[]): string[] {
   for (const pallet of pallets) {
     const sscc = (pallet.sscc || "").trim();
 
-    totalBySscc.set(
-      sscc,
-      (totalBySscc.get(sscc) ?? 0) + 1,
-    );
+    totalBySscc.set(sscc, (totalBySscc.get(sscc) ?? 0) + 1);
   }
 
   return pallets.map((pallet) => {
@@ -409,26 +407,30 @@ function stockPalletSheet(parsed: ParsedPOFile, fileName: string): XLSX.WorkShee
 
   const dataRows = parsed.pallets.map((pallet, palletIndex) =>
     STOCK_PALLET_HEADERS.map((header) => {
-      const value = header === "seq_no"
-        ? sequenceNumbers[palletIndex]
-        : readColumn(parsed, pallet, header, fileName);
+      const value =
+        header === "seq_no"
+          ? sequenceNumbers[palletIndex]
+          : readColumn(parsed, pallet, header, fileName);
 
       return formatExcelValue(header, value);
     }),
   );
 
-  const rows = [
-    [...STOCK_PALLET_HEADERS],
-    ...dataRows,
-  ];
-  
+  const rows = [[...STOCK_PALLET_HEADERS], ...dataRows];
+
   const sheet = XLSX.utils.aoa_to_sheet(rows);
-  sheet["!cols"] = STOCK_PALLET_HEADERS.map((header) => ({ wch: Math.max(12, Math.min(24, header.length + 2)) }));
-  
+  sheet["!cols"] = STOCK_PALLET_HEADERS.map((header) => ({
+    wch: Math.max(12, Math.min(24, header.length + 2)),
+  }));
+
   return sheet;
 }
 
-export function convertedWorkbook(parsed: ParsedPOFile, validation: POValidationResult, fileName = ""): XLSX.WorkBook {
+export function convertedWorkbook(
+  parsed: ParsedPOFile,
+  validation: POValidationResult,
+  fileName = "",
+): XLSX.WorkBook {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, stockPalletSheet(parsed, fileName), "Stock Pallet");
   return workbook;

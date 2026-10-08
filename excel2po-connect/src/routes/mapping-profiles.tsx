@@ -2,13 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
-import {
-  AppShell,
-  PageHeader,
-  Section,
-  DataTable,
-  Breadcrumb,
-} from "@/components/bc/shell";
+import { AppShell, PageHeader, Section, DataTable, Breadcrumb } from "@/components/bc/shell";
 import { deleteMappingProfileFn, listMappingProfilesFn } from "@/lib/po/conversion.functions";
 
 export const Route = createFileRoute("/mapping-profiles")({
@@ -39,10 +33,8 @@ function MappingProfiles() {
   return (
     <AppShell>
       <div className="space-y-4">
-        <Breadcrumb
-          items={[{ label: "Home", href: "/" }, { label: "Mapping Profiles" }]}
-        />
-        
+        <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Mapping Profiles" }]} />
+
         <PageHeader
           title="Mapping Profiles"
           subtitle="Saved column mappings from your conversions"

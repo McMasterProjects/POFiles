@@ -90,11 +90,7 @@ function Settings() {
               value={settings.provider}
               onChange={(v) => set("provider", v)}
             />
-            <Input
-              label="Version"
-              value={settings.version}
-              onChange={(v) => set("version", v)}
-            />
+            <Input label="Version" value={settings.version} onChange={(v) => set("version", v)} />
             <Input
               label="Organisation Code"
               value={settings.organisationCode}

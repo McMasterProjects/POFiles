@@ -49,7 +49,10 @@ export function buildFileName(header: POHeaderInput, sequenceOverride?: string):
   const seq = (sequenceOverride ?? getNextSequenceNumber(header)).padStart(3, "0");
   const destination = getDestinationSuffix(header);
 
-  const source = String(header.sourceAddress || "000").trim().padEnd(3, "0").slice(0, 3);
+  const source = String(header.sourceAddress || "000")
+    .trim()
+    .padEnd(3, "0")
+    .slice(0, 3);
   return `PO${source}${seq}.${destination}`;
 }
 
@@ -130,10 +133,14 @@ export function resolveWeightSelection(
 }
 
 export function summarizePalletGroups(rows: Array<PalletRow | Record<string, unknown>>) {
-  const groups = new Map<string, { container: string; cartons: number; palletQuantity: number; grossMass: number }>();
+  const groups = new Map<
+    string,
+    { container: string; cartons: number; palletQuantity: number; grossMass: number }
+  >();
 
   rows.forEach((row) => {
-    const values = "values" in row ? (row.values as Record<string, unknown>) : (row as Record<string, unknown>);
+    const values =
+      "values" in row ? (row.values as Record<string, unknown>) : (row as Record<string, unknown>);
     const container = String(values.containerNumber ?? values.container ?? "").trim() || "UNKNOWN";
     const cartons = toNumber(values.cartons) ?? 0;
     const palletQuantity = toNumber(values.palletQuantity) ?? 1;
