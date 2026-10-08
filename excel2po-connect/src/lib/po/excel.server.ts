@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { PALLET_FIELDS } from "./types";
 
 export interface SheetInfo {
   name: string;
@@ -12,6 +13,39 @@ export interface WorkbookInspection {
   headers: string[];
   rowCount: number;
   previewRows: Record<string, string>[];
+}
+
+function decodeTransmission(base64: string): string {
+  return Buffer.from(base64, "base64").toString("latin1");
+}
+
+export function isPaltrackTransmission(base64: string): boolean {
+  return decodeTransmission(base64)
+    .split(/\r?\n/)
+    .some((line) => line.slice(0, 2) === "OP");
+}
+
+function transmissionRows(base64: string): Record<string, string>[] {
+  return decodeTransmission(base64)
+    .split(/\r?\n/)
+    .filter((line) => line.slice(0, 2) === "OP")
+    .map((line) =>
+      Object.fromEntries(
+        PALLET_FIELDS.map((field) => [field.key, line.slice(field.from - 1, field.to).trim()]),
+      ),
+    );
+}
+
+export function inspectTransmission(base64: string, previewLimit = 20): WorkbookInspection {
+  const rows = transmissionRows(base64);
+  const headers = PALLET_FIELDS.map((field) => field.key);
+  return {
+    worksheets: [{ name: "PO", rowCount: rows.length, columnCount: headers.length }],
+    sheetName: "PO",
+    headers,
+    rowCount: rows.length,
+    previewRows: rows.slice(0, previewLimit),
+  };
 }
 
 function sheetMatrix(ws: XLSX.WorkSheet): string[][] {
@@ -64,6 +98,10 @@ export function readSheetRows(
   base64: string,
   sheetName: string,
 ): { headers: string[]; rows: Record<string, string>[] } {
+  if (isPaltrackTransmission(base64)) {
+    return { headers: PALLET_FIELDS.map((field) => field.key), rows: transmissionRows(base64) };
+  }
+
   const wb = readWorkbook(base64);
   const name = wb.SheetNames.includes(sheetName) ? sheetName : wb.SheetNames[0];
   const matrix = sheetMatrix(wb.Sheets[name]);

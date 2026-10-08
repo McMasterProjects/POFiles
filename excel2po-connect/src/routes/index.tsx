@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import * as XLSX from "xlsx";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -36,22 +37,13 @@ import {
   type ValidationIssue,
 } from "@/lib/po/types";
 import { getMappingOptionLabel } from "@/lib/po/mapping";
+import { buildPODownloadSet } from "@/lib/po/service.server";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      {
-        name: "description",
-        content:
-          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
-      },
-      { property: "og:title", content: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      {
-        property: "og:description",
-        content:
-          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
-      },
+      { title: "Excel to PO" },
+      { property: "og:title", content: "Excel to PO" },
     ],
   }),
   component: ConvertExcelPage,
@@ -78,7 +70,6 @@ const emptyHeader: POHeaderInput = {
   destinationAddress: "000",
   sequenceNumber: "0001",
   batchNumber: "465",
-  loadId: "",
   loadReference: "",
   locationCode: "",
   containerNumber: "",
@@ -105,6 +96,15 @@ function downloadText(fileName: string, content: string) {
   link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadExcel(fileName: string, content: string) {
+  const workbook = XLSX.utils.book_new();
+  const rows = content.split(/\r?\n/).map((line) => [line]);
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  sheet["!cols"] = [{ wch: 200 }];
+  XLSX.utils.book_append_sheet(workbook, sheet, "PO");
+  XLSX.writeFile(workbook, fileName.endsWith(".xlsx") ? fileName : `${fileName}.xlsx`);
 }
 
 function toBase64(buffer: ArrayBuffer): string {
@@ -187,7 +187,11 @@ function ConvertExcelPage() {
       .trim()
       .slice(0, 3)
       .padEnd(3, "0");
-    return `POMTS${seq}.${destination}`;
+    const source = String(header.sourceAddress || "000")
+      .trim()
+      .slice(0, 3)
+      .padEnd(3, "0");
+    return `PO${source}${seq}.${destination}`;
   }, [header]);
 
   const addLog = (message: string) =>
@@ -316,6 +320,12 @@ function ConvertExcelPage() {
     }
   }
 
+  async function downloadPO() {
+    if (!preview) return;
+    const downloads = buildPODownloadSet(preview.fileName, preview.content);
+    downloadText(downloads.notepad.fileName, downloads.notepad.content);
+  }
+
   async function downloadReport() {
     if (!result) return;
     const { getConversionReportFn } = await import("@/lib/po/conversion.functions");
@@ -324,6 +334,18 @@ function ConvertExcelPage() {
       downloadText(report.fileName, report.content);
     } catch {
       toast.error("Generate the PO file first to produce a report.");
+    }
+  }
+
+  async function refreshCurrentSheet() {
+    if (!inspection) return;
+    try {
+      await changeSheet(inspection.sheetName);
+      if (result || header) {
+        await runGenerate();
+      }
+    } catch (error) {
+      toast.error((error as Error).message);
     }
   }
 
@@ -341,9 +363,8 @@ function ConvertExcelPage() {
   return (
     <AppShell>
       <PageTitle
-        title="Excel to PO Conversion"
-        subtitle="Upload a pallet spreadsheet and transmit a Paltrack fixed-width PO file."
-      />
+        title="Excel to PO"
+          />
 
       <CommandBar>
         <CommandButton icon={Upload} onClick={() => fileRef.current?.click()} primary>
@@ -372,11 +393,7 @@ function ConvertExcelPage() {
         <CommandButton icon={File} onClick={runGenerate} disabled={!inspection || !!busy}>
           Generate PO
         </CommandButton>
-        <CommandButton
-          icon={Download}
-          disabled={!preview}
-          onClick={() => preview && downloadText(preview.fileName, preview.content)}
-        >
+        <CommandButton icon={Download} disabled={!preview} onClick={() => void downloadPO()}>
           Download PO
         </CommandButton>
         <CommandButton icon={FileText} disabled={!result} onClick={downloadReport}>
@@ -385,10 +402,7 @@ function ConvertExcelPage() {
         <CommandButton icon={Eraser} onClick={clearAll}>
           Clear
         </CommandButton>
-        <CommandButton
-          icon={RefreshCw}
-          onClick={() => inspection && changeSheet(inspection.sheetName)}
-        >
+        <CommandButton icon={RefreshCw} onClick={() => void refreshCurrentSheet()}>
           Refresh
         </CommandButton>
         <span className="ml-auto pr-1">
@@ -399,7 +413,7 @@ function ConvertExcelPage() {
       <input
         ref={fileRef}
         type="file"
-        accept=".xlsx"
+        accept=".xlsx,.000"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -421,7 +435,7 @@ function ConvertExcelPage() {
               className="flex items-center justify-between border border-dashed border-input bg-secondary px-3 py-4 text-[12.5px]"
             >
               <span className="text-muted-foreground">
-                Drag an .xlsx file here, or use Upload Excel on the command bar.
+                Drag an .xlsx or .000 file here, or use Upload Excel on the command bar.
               </span>
               <StatusIndicator kind={status} label={statusLabel} />
             </div>
@@ -466,8 +480,7 @@ function ConvertExcelPage() {
                   ["Destination Address", "destinationAddress", 3],
                   ["Sequence Number", "sequenceNumber", 10],
                   ["Batch Number", "batchNumber", 10],
-                  ["Load ID", "loadId", 10],
-                  ["Load Reference", "loadReference", 10],
+                  ["Load Reference", "loadReference", 25],
                   ["Location Code", "locationCode", 7],
                   ["Container Number", "containerNumber", 11],
                   ["Seal Number", "sealNumber", 15],
@@ -802,3 +815,4 @@ function Td({ children, className = "" }: { children?: React.ReactNode; classNam
 function Empty() {
   return <p className="text-[12.5px] text-muted-foreground">Upload an Excel file to continue.</p>;
 }
+

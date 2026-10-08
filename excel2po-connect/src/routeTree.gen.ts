@@ -14,6 +14,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MappingProfilesRouteImport } from './routes/mapping-profiles'
+import { Route as PoToExcelRouteImport } from './routes/po-to-excel'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ValidationErrorsRouteImport } from './routes/validation-errors'
 
@@ -42,6 +43,11 @@ const MappingProfilesRoute = MappingProfilesRouteImport.update({
   path: '/mapping-profiles',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PoToExcelRoute = PoToExcelRouteImport.update({
+  id: '/po-to-excel',
+  path: '/po-to-excel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/logs': typeof LogsRoute
   '/mapping-profiles': typeof MappingProfilesRoute
+  '/po-to-excel': typeof PoToExcelRoute
   '/settings': typeof SettingsRoute
   '/validation-errors': typeof ValidationErrorsRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/logs': typeof LogsRoute
   '/mapping-profiles': typeof MappingProfilesRoute
+  '/po-to-excel': typeof PoToExcelRoute
   '/settings': typeof SettingsRoute
   '/validation-errors': typeof ValidationErrorsRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/logs': typeof LogsRoute
   '/mapping-profiles': typeof MappingProfilesRoute
+  '/po-to-excel': typeof PoToExcelRoute
   '/settings': typeof SettingsRoute
   '/validation-errors': typeof ValidationErrorsRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/logs'
     | '/mapping-profiles'
+    | '/po-to-excel'
     | '/settings'
     | '/validation-errors'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/logs'
     | '/mapping-profiles'
+    | '/po-to-excel'
     | '/settings'
     | '/validation-errors'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/logs'
     | '/mapping-profiles'
+    | '/po-to-excel'
     | '/settings'
     | '/validation-errors'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   LogsRoute: typeof LogsRoute
   MappingProfilesRoute: typeof MappingProfilesRoute
+  PoToExcelRoute: typeof PoToExcelRoute
   SettingsRoute: typeof SettingsRoute
   ValidationErrorsRoute: typeof ValidationErrorsRoute
 }
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MappingProfilesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/po-to-excel': {
+      id: '/po-to-excel'
+      path: '/po-to-excel'
+      fullPath: '/po-to-excel'
+      preLoaderRoute: typeof PoToExcelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   LogsRoute: LogsRoute,
   MappingProfilesRoute: MappingProfilesRoute,
+  PoToExcelRoute: PoToExcelRoute,
   SettingsRoute: SettingsRoute,
   ValidationErrorsRoute: ValidationErrorsRoute,
 }

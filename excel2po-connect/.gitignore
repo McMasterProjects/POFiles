@@ -34,3 +34,11 @@ dist-ssr
 .vercel
 .env*.local
 .env
+
+# Local test data and archives
+/excel/
+/compare-data.js
+*.zip
+
+# Local source backups
+*.bak

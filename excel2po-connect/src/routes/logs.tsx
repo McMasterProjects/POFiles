@@ -1,7 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AppShell, PageTitle } from "@/components/bc/shell";
+import { RefreshCw } from "lucide-react";
+import {
+  AppShell,
+  PageHeader,
+  Section,
+  DataTable,
+  Button,
+  Input,
+  Breadcrumb,
+} from "@/components/bc/shell";
 import { listLogsFn } from "@/lib/po/conversion.functions";
 
 export const Route = createFileRoute("/logs")({
@@ -23,7 +32,10 @@ export const Route = createFileRoute("/logs")({
 });
 
 function Logs() {
-  const { data = [], refetch } = useQuery({ queryKey: ["logs"], queryFn: () => listLogsFn() });
+  const { data = [], refetch, isLoading } = useQuery({
+    queryKey: ["logs"],
+    queryFn: () => listLogsFn(),
+  });
   const [filter, setFilter] = useState("");
 
   const rows = data.filter((l) =>
@@ -36,65 +48,67 @@ function Logs() {
 
   return (
     <AppShell>
-      <PageTitle title="System Logs" subtitle={`${rows.length} entries`} />
-      <div className="mb-2 flex gap-2">
-        <input
-          className="bc-input max-w-xs"
-          placeholder="Filter by conversion ID, level, module or message"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+      <div className="space-y-4">
+        <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "System Logs" }]} />
+        
+        <PageHeader
+          title="System Logs"
+          subtitle="Processing logs for all conversions"
+          count={rows.length}
+          actions={[
+            {
+              label: "Refresh",
+              icon: RefreshCw,
+              onClick: () => refetch(),
+            },
+          ]}
         />
-        <button
-          className="rounded-[2px] border border-input px-2 py-1 text-[12px] hover:bg-accent"
-          onClick={() => refetch()}
-        >
-          Refresh
-        </button>
-      </div>
-      <div className="bc-card max-h-[70vh] overflow-auto">
-        <table className="w-full border-collapse text-[12px]">
-          <thead className="sticky top-0 bg-secondary text-left">
-            <tr>
-              {[
-                "Timestamp",
-                "Level",
-                "Conversion ID",
-                "Module",
-                "Action",
-                "Row",
-                "Field",
-                "Message",
-              ].map((h) => (
-                <th key={h} className="border-r border-border px-2 py-1 whitespace-nowrap">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((l, i) => (
-              <tr key={i} className="border-t border-border">
-                <td className="border-r border-border px-2 py-1 whitespace-nowrap">
-                  {l.timestamp}
-                </td>
-                <td className="border-r border-border px-2 py-1">{l.level}</td>
-                <td className="border-r border-border px-2 py-1">{l.conversionId}</td>
-                <td className="border-r border-border px-2 py-1">{l.module}</td>
-                <td className="border-r border-border px-2 py-1">{l.action}</td>
-                <td className="border-r border-border px-2 py-1">{l.excelRow ?? ""}</td>
-                <td className="border-r border-border px-2 py-1">{l.field ?? ""}</td>
-                <td className="px-2 py-1">{l.message ?? ""}</td>
-              </tr>
-            ))}
-            {!rows.length ? (
-              <tr>
-                <td className="px-2 py-2 text-muted-foreground" colSpan={8}>
-                  No log entries.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+
+        <Section title="Filter Logs" collapsible={true}>
+          <Input
+            label="Search"
+            placeholder="Filter by conversion ID, level, module or message"
+            value={filter}
+            onChange={(e) => setFilter(e)}
+          />
+        </Section>
+
+        <Section title="All Logs" collapsible={false}>
+          <DataTable
+            columns={[
+              { key: "timestamp", header: "Timestamp", width: "140px" },
+              { key: "level", header: "Level", width: "80px" },
+              { key: "conversionId", header: "Conversion ID", width: "120px" },
+              { key: "module", header: "Module", width: "100px" },
+              { key: "action", header: "Action", width: "100px" },
+              { key: "excelRow", header: "Row", width: "70px" },
+              { key: "field", header: "Field", width: "100px" },
+              { key: "message", header: "Message" },
+            ]}
+            data={rows.map((l) => ({
+              timestamp: l.timestamp,
+              level: (
+                <span className={`text-xs font-medium ${
+                  l.level === "error"
+                    ? "text-status-error"
+                    : l.level === "warn"
+                      ? "text-status-warning"
+                      : "text-muted-foreground"
+                }`}>
+                  {l.level}
+                </span>
+              ),
+              conversionId: l.conversionId,
+              module: l.module,
+              action: l.action,
+              excelRow: l.excelRow ?? "",
+              field: l.field ?? "",
+              message: l.message ?? "",
+            }))}
+            loading={isLoading}
+            empty="No log entries found."
+          />
+        </Section>
       </div>
     </AppShell>
   );

@@ -49,14 +49,15 @@ export function buildFileName(header: POHeaderInput, sequenceOverride?: string):
   const seq = (sequenceOverride ?? getNextSequenceNumber(header)).padStart(3, "0");
   const destination = getDestinationSuffix(header);
 
-  return `POMTS${seq}.${destination}`;
+  const source = String(header.sourceAddress || "000").trim().padEnd(3, "0").slice(0, 3);
+  return `PO${source}${seq}.${destination}`;
 }
 
 function getDestinationSuffix(header: POHeaderInput): string {
   return String(header.destinationAddress || "000")
     .trim()
-    .slice(0, 3)
-    .padEnd(3, "0");
+    .padEnd(3, "0")
+    .slice(0, 3);
 }
 
 export function createRandomSequenceNumbers(count: number): number[] {
@@ -82,7 +83,7 @@ function getBarcodeKey(row: PalletRow, index: number): string {
   return sscc || palletId || `__row__${index}`;
 }
 
-export function assignRandomSequenceNumbers(rows: PalletRow[]): number[] {
+export function assignSequenceNumbers(rows: PalletRow[]): number[] {
   const barcodeGroups = new Map<string, number[]>();
 
   rows.forEach((row, index) => {
@@ -101,14 +102,71 @@ export function assignRandomSequenceNumbers(rows: PalletRow[]): number[] {
       continue;
     }
 
-    const randomizedSequences = createRandomSequenceNumbers(rowIndexes.length);
-
     rowIndexes.forEach((rowIndex, groupIndex) => {
-      rowSequences[rowIndex] = randomizedSequences[groupIndex];
+      rowSequences[rowIndex] = groupIndex + 1;
     });
   }
 
   return rowSequences;
+}
+
+type WeightSelectionOption = "Actual Weights" | "Calculated Weights" | "VGM Weights";
+
+export function resolveWeightSelection(
+  option: string | undefined | null,
+  actual: number | null | undefined,
+  calculated: number | null | undefined,
+  vgm: number | null | undefined,
+): number {
+  switch ((option ?? "Actual Weights").trim()) {
+    case "Calculated Weights":
+      return toNumber(calculated) ?? toNumber(actual) ?? toNumber(vgm) ?? 0;
+    case "VGM Weights":
+      return toNumber(vgm) ?? toNumber(actual) ?? toNumber(calculated) ?? 0;
+    case "Actual Weights":
+    default:
+      return toNumber(actual) ?? toNumber(calculated) ?? toNumber(vgm) ?? 0;
+  }
+}
+
+export function summarizePalletGroups(rows: Array<PalletRow | Record<string, unknown>>) {
+  const groups = new Map<string, { container: string; cartons: number; palletQuantity: number; grossMass: number }>();
+
+  rows.forEach((row) => {
+    const values = "values" in row ? (row.values as Record<string, unknown>) : (row as Record<string, unknown>);
+    const container = String(values.containerNumber ?? values.container ?? "").trim() || "UNKNOWN";
+    const cartons = toNumber(values.cartons) ?? 0;
+    const palletQuantity = toNumber(values.palletQuantity) ?? 1;
+    const grossMass = toNumber(values.grossMass) ?? 0;
+
+    const existing = groups.get(container) ?? {
+      container,
+      cartons: 0,
+      palletQuantity: 0,
+      grossMass: 0,
+    };
+
+    existing.cartons += cartons;
+    existing.palletQuantity += palletQuantity;
+    existing.grossMass += grossMass;
+    groups.set(container, existing);
+  });
+
+  const orderedGroups = [...groups.values()].sort((a, b) => a.container.localeCompare(b.container));
+
+  const totals = orderedGroups.reduce(
+    (sum, group) => ({
+      cartons: sum.cartons + group.cartons,
+      palletQuantity: sum.palletQuantity + group.palletQuantity,
+      grossMass: sum.grossMass + group.grossMass,
+    }),
+    { cartons: 0, palletQuantity: 0, grossMass: 0 },
+  );
+
+  return {
+    groups: orderedGroups,
+    totals,
+  };
 }
 
 export function generatePOFile(input: {
@@ -142,12 +200,12 @@ export function generatePOFile(input: {
 
   const ctx = makeContext(header);
 
-  const cartonCount = rows.reduce((sum, row) => sum + (toNumber(row.values.cartons) ?? 0), 0);
-
-  const palletCount = rows.length;
+  const groupSummary = summarizePalletGroups(rows);
+  const cartonCount = groupSummary.totals.cartons;
+  const palletCount = groupSummary.totals.palletQuantity;
   const records: BuiltRecord[] = [];
 
-  const rowSequences = assignRandomSequenceNumbers(rows);
+  const rowSequences = assignSequenceNumbers(rows);
 
   records.push(buildBHRecord(ctx));
   log("BH generated");

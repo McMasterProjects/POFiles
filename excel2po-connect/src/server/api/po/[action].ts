@@ -1,11 +1,115 @@
-import { createError, defineEventHandler, readBody } from "h3";
 import { z } from "zod";
-import { handleUpload, inspectSheet, runConversion, requireConversion, buildValidationReport } from "../../../src/lib/po/service.server";
-import { store, newId } from "../../../src/lib/po/store.server";
-import { conversionInput } from "../../../src/lib/po/conversion.functions";
-import type { MappingProfile } from "../../../src/lib/po/store.server";
+import { handleUpload, inspectSheet, runConversion, requireConversion, buildValidationReport } from "../../../lib/po/service.server";
+import { store, newId } from "../../../lib/po/store.server";
+import { conversionInput } from "../../../lib/po/conversion.functions";
+import type { MappingProfile } from "../../../lib/po/store.server";
 
-function requireActionParam(event: any) {
+interface ErrorOptions {
+  statusCode: number;
+  statusMessage: string;
+}
+
+interface CustomError extends Error {
+  statusCode: number;
+  statusMessage: string;
+}
+
+interface EventNode {
+  req: any;
+  res: any;
+}
+
+interface ApiEvent {
+  body?: unknown;
+  node?: EventNode;
+  context?: {
+    params?: {
+      action?: unknown;
+    };
+  };
+}
+
+interface UploadBody {
+  fileName: string;
+  fileSize: number;
+  base64: string;
+  sheetName?: string;
+}
+
+interface SelectSheetBody {
+  uploadId: string;
+  sheetName: string;
+}
+
+interface PreviewBody {
+  id: string;
+}
+
+interface ReportBody {
+  id: string;
+}
+
+interface ProfilesBody {
+  name: string;
+  mapping: Record<string, string | undefined>;
+}
+
+interface ProfilesDeleteBody {
+  id: string;
+}
+
+interface HealthResponse {
+  status: string;
+  conversions: number;
+  uploads: number;
+}
+
+interface PreviewResponse {
+  fileName: string;
+  content: unknown;
+}
+
+interface ProfilesDeleteResponse {
+  ok: boolean;
+}
+
+interface OptionsResponse {
+  status: string;
+}
+
+function createError(options: ErrorOptions): CustomError {
+  const error = new Error(options.statusMessage) as CustomError;
+  error.statusCode = options.statusCode;
+  error.statusMessage = options.statusMessage;
+  return error;
+}
+
+function defineEventHandler<T>(handler: T): T {
+  return handler;
+}
+
+async function readBody(event: ApiEvent): Promise<unknown> {
+  if (event.body !== undefined) return event.body;
+
+  const request = event.node?.req;
+  if (!request) return undefined;
+
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    request.on("data", (chunk: any) => { raw += chunk.toString(); });
+    request.on("end", () => {
+      if (!raw) return resolve(undefined);
+      try {
+        resolve(JSON.parse(raw));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    request.on("error", reject);
+  });
+}
+
+function requireActionParam(event: ApiEvent): string {
   const action = event.context?.params?.action;
   if (!action || typeof action !== "string") {
     throw createError({ statusCode: 404, statusMessage: "API path not found." });
@@ -13,7 +117,7 @@ function requireActionParam(event: any) {
   return action;
 }
 
-function requireNode(event: any) {
+function requireNode(event: ApiEvent): EventNode {
   const node = event.node;
   if (!node) {
     throw createError({ statusCode: 500, statusMessage: "Runtime event node is unavailable." });
@@ -21,7 +125,7 @@ function requireNode(event: any) {
   return node;
 }
 
-function allowCors(event: any) {
+function allowCors(event: ApiEvent): void {
   const node = requireNode(event);
   node.res.setHeader("Access-Control-Allow-Origin", "*");
   node.res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -31,7 +135,7 @@ function allowCors(event: any) {
   );
 }
 
-function requireApiKey(event: any) {
+function requireApiKey(event: ApiEvent): void {
   const node = requireNode(event);
   const expectedKey = process.env.APP_API_KEY;
   if (!expectedKey) {
@@ -49,7 +153,7 @@ function requireApiKey(event: any) {
   }
 }
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: ApiEvent) => {
   allowCors(event);
   requireApiKey(event);
 

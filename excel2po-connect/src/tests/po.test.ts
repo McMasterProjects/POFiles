@@ -9,17 +9,31 @@ import {
   isValidSSCC,
   parseExcelDate,
   toPlainText,
+  validateAndFormatSSCC,
 } from "../lib/po/format";
-import { buildFileName, generatePOFile, CRLF, getNextSequenceNumber } from "../lib/po/generator";
-import { RECORD_LENGTHS } from "../lib/po/builders";
+import {
+  buildFileName,
+  generatePOFile,
+  CRLF,
+  getNextSequenceNumber,
+  summarizePalletGroups,
+  resolveWeightSelection,
+} from "../lib/po/generator";
+import { RECORD_LENGTHS, buildOPRecord } from "../lib/po/builders";
 import {
   getMappingOptionLabel,
   resolveBackendMapping,
   suggestMapping,
   suggestHeaderValues,
 } from "../lib/po/mapping";
-import { inferHeaderFromRows } from "../lib/po/service.server";
+import {
+  buildPODownloadSet,
+  handleUpload,
+  inferHeaderFromRows,
+} from "../lib/po/service.server";
 import type { POHeaderInput } from "../lib/po/types";
+import { headerSchema } from "../lib/po/conversion.functions";
+import { hydrateConversionRecords, store } from "../lib/po/store.server";
 
 const header: POHeaderInput = {
   sourceAddress: "MTS",
@@ -63,6 +77,29 @@ const rows = [
   },
 ];
 
+describe("legacy PO report helpers", () => {
+  it("groups pallet rows by container and totals each container the way the report does", () => {
+    const summary = summarizePalletGroups([
+      { excelRow: 2, values: { containerNumber: "C1", cartons: 12, palletQuantity: 3, grossMass: 100 } },
+      { excelRow: 3, values: { containerNumber: "C1", cartons: 8, palletQuantity: 2, grossMass: 50 } },
+      { excelRow: 4, values: { containerNumber: "C2", cartons: 15, palletQuantity: 4, grossMass: 80 } },
+    ] as any);
+
+    expect(summary.groups.map((group) => group.container)).toEqual(["C1", "C2"]);
+    expect(summary.groups[0].cartons).toBe(20);
+    expect(summary.groups[0].palletQuantity).toBe(5);
+    expect(summary.groups[1].cartons).toBe(15);
+    expect(summary.totals.cartons).toBe(35);
+    expect(summary.totals.palletQuantity).toBe(9);
+  });
+
+  it("chooses the correct print weight option for each record", () => {
+    expect(resolveWeightSelection("Actual Weights", 120, 130, 140)).toBe(120);
+    expect(resolveWeightSelection("Calculated Weights", 120, 130, 140)).toBe(130);
+    expect(resolveWeightSelection("VGM Weights", 120, 130, 140)).toBe(140);
+  });
+});
+
 describe("fixed-width helper", () => {
   it("writes alpha values left aligned and space padded", () => {
     const { buffer } = setFixedWidthField(blankLine(10), 1, 5, "AB");
@@ -91,10 +128,10 @@ describe("fixed-width helper", () => {
     expect(writer.done().line.length).toBe(20);
   });
 
-  it("removes special characters from alpha values before writing them", () => {
+  it("preserves special characters in alpha values", () => {
     const { buffer } = setFixedWidthField(blankLine(8), 1, 8, "AB-12/3");
 
-    expect(buffer).toBe("AB123   ");
+    expect(buffer).toBe("AB-12/3 ");
   });
 });
 
@@ -141,11 +178,133 @@ describe("formatting", () => {
   it("validates SSCC", () => {
     expect(isValidSSCC("600123456789012345")).toBe(true);
     expect(isValidSSCC("12345")).toBe(false);
+    expect(isValidSSCC("000123456")).toBe(false);
+  });
+
+  it("pads AO SSCC values to 18 characters and requires an organisation code", () => {
+    expect(validateAndFormatSSCC("6001234567890123", "AO")).toEqual({
+      success: true,
+      value: "600123456789012300",
+    });
+    expect(validateAndFormatSSCC("6001234567890123", "")).toEqual({
+      success: false,
+      value: "6001234567890123",
+      error: "Organisation code is required.",
+    });
+    expect(validateAndFormatSSCC("6001234567890123", "GG")).toEqual({
+      success: false,
+      value: "6001234567890123",
+      error:
+        "SSCC/barcode must contain exactly 18 characters for organisation GG. Received 16 characters.",
+    });
+  });
+
+  it("falls back to a 18-digit barcode when SSCC is blank", () => {
+    const record = buildOPRecord(
+      {
+        header,
+        loadId: "LOAD123",
+        batchNumber: "000001",
+        fileSequence: "001",
+        transactionDate: "20260114",
+        transactionTime: "08:05",
+      },
+      {
+        excelRow: 9,
+        values: {
+          palletId: "600123456789012345",
+          sscc: "",
+          cartons: 20,
+          country: "ZA",
+          nettMass: 1200,
+        },
+      },
+      1,
+    );
+
+    expect(record.errors.some((error) => error.code === "INVALID_SSCC")).toBe(false);
+    expect(record.line.slice(315, 333)).toContain("600123456789012345");
+    expect(record.line.slice(12, 21).trim()).toBe("");
+  });
+
+  it("formats AO short pallet barcodes like the attached transmission", () => {
+    const aoHeader = { ...header, organisationCode: "ao" };
+    const record = buildOPRecord(
+      {
+        header: aoHeader,
+        loadId: "LOAD123",
+        batchNumber: "000001",
+        fileSequence: "001",
+        transactionDate: "20260408",
+        transactionTime: "09:22",
+      },
+      {
+        excelRow: 2,
+        values: {
+          palletId: "1302936",
+          cartons: 76,
+          nettMass: 475,
+          grossMass: 521.143,
+        },
+      },
+      1,
+    );
+
+    expect(record.errors.some((error) => error.code === "INVALID_SSCC")).toBe(false);
+    expect(record.line.slice(73, 75)).toBe("AO");
+    expect(record.line.slice(315, 333)).toBe("130293600000000000");
+  });
+});
+
+describe("dashboard data normalization", () => {
+  it("hydrates conversion records without leaking null values into the dashboard", () => {
+    const id = "CNV-NULL-TEST";
+
+    hydrateConversionRecords([
+      {
+        id,
+        uploadId: "UP-1",
+        status: null as any,
+        sourceFileName: null as any,
+        outputFileName: null as any,
+        selectedSheet: "Sheet1",
+        totalRows: null as any,
+        validRows: null as any,
+        invalidRows: null as any,
+        warningCount: null as any,
+        recordCount: null as any,
+        palletCount: null as any,
+        cartonCount: null as any,
+        createdAt: null as any,
+        completedAt: null,
+        content: "",
+        errors: null as any,
+        warnings: null as any,
+        header: null as any,
+        mapping: null as any,
+      },
+    ]);
+
+    const record = store.conversions.get(id)!;
+
+    expect(record.status).toBe("Unknown");
+    expect(record.sourceFileName).toBe("");
+    expect(record.outputFileName).toBe("");
+    expect(record.totalRows).toBe(0);
+    expect(record.validRows).toBe(0);
+    expect(record.invalidRows).toBe(0);
+    expect(record.warningCount).toBe(0);
+    expect(record.recordCount).toBe(0);
+    expect(record.palletCount).toBe(0);
+    expect(record.cartonCount).toBe(0);
+    expect(record.createdAt).toBeTypeOf("string");
+    expect(Array.isArray(record.errors)).toBe(true);
+    expect(Array.isArray(record.warnings)).toBe(true);
   });
 });
 
 describe("file naming", () => {
-  it("builds Paltrack-style sequential file names", () => {
+  it("builds Paltrack fixed-width file names", () => {
     expect(
       buildFileName(
         {
@@ -190,11 +349,163 @@ describe("file naming", () => {
   });
 });
 
-describe("backend mapping", () => {
-  it("overrides the frontend mapping and uses the hard-coded pallet id column", () => {
-    const effective = resolveBackendMapping(["Barcode", "Cartons"], { palletId: "Other Column" });
+describe("header validation", () => {
+  it("strips the removed loadId field from accepted header data", () => {
+    const parsed = headerSchema.parse({
+      sourceAddress: "MTS",
+      destinationAddress: "000",
+      sequenceNumber: "0001",
+      batchNumber: "465",
+      loadId: "LOAD123",
+      loadReference: "REF123",
+    });
 
-    expect(effective.palletId).toBe("Barcode");
+    expect(parsed).not.toHaveProperty("loadId");
+    expect(parsed.loadReference).toBe("REF123");
+  });
+
+  it("accepts load references that fit the PO name field width", () => {
+    const parsed = headerSchema.parse({
+      sourceAddress: "MTS",
+      destinationAddress: "000",
+      sequenceNumber: "0001",
+      batchNumber: "465",
+      loadReference: "THIS_IS_A_VALID_LOAD_REF",
+    });
+
+    expect(parsed.loadReference).toBe("THIS_IS_A_VALID_LOAD_REF");
+  });
+
+  it("rejects load references longer than the PO name field width", () => {
+    expect(() =>
+      headerSchema.parse({
+        sourceAddress: "MTS",
+        destinationAddress: "000",
+        sequenceNumber: "0001",
+        batchNumber: "465",
+        loadReference: "THIS_IS_A_LOAD_REFERENCE_THAT_IS_TOO_LONG",
+      }),
+    ).toThrow();
+  });
+});
+
+describe("record retention and export format", () => {
+  it("accepts AO fixed-width transmissions and maps their OP rows", () => {
+    const aoRecord = buildOPRecord(
+      {
+        header: { ...header, organisationCode: "AO" } as any,
+        loadId: "002-000972",
+        batchNumber: "000972",
+        fileSequence: "001",
+        transactionDate: "20260408",
+        transactionTime: "09:22",
+      } as any,
+      {
+        excelRow: 2,
+        values: { sscc: "1302936", cartons: 475, country: "ZA" },
+      },
+      1,
+    );
+    const ocRecord = setFixedWidthField(blankLine(220), 20, 21, "AO").buffer;
+    const base64 = Buffer.from(`${ocRecord}\n${aoRecord.line}\n`).toString("base64");
+    const result = handleUpload({
+      fileName: "PO002972.000",
+      fileSize: Buffer.byteLength(Buffer.from(base64, "base64")),
+      base64,
+    });
+
+    expect(result.rowCount).toBe(1);
+    expect(result.suggestedHeaderValues.organisationCode).toBe("AO");
+    expect(result.previewRows[0].sscc).toMatch(/^1302936\d{11}$/);
+  });
+
+  it("hydrates conversion records so dashboard data is not lost on refresh", () => {
+    const snapshot = [{
+      id: "CNV-REFRESH-01",
+      uploadId: "UPL-REFRESH-01",
+      status: "Completed",
+      sourceFileName: "sample.xlsx",
+      outputFileName: "POMTS001.00",
+      selectedSheet: "Sheet1",
+      totalRows: 2,
+      validRows: 2,
+      invalidRows: 0,
+      warningCount: 0,
+      recordCount: 3,
+      palletCount: 2,
+      cartonCount: 30,
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      content: "PO DATA",
+      errors: [],
+      warnings: [],
+      header: {},
+      mapping: {},
+    }];
+
+    hydrateConversionRecords(snapshot as any);
+
+    expect(store.conversions.get("CNV-REFRESH-01")?.content).toBe("PO DATA");
+    expect(store.conversions.get("CNV-REFRESH-01")?.outputFileName).toBe("POMTS001.00");
+  });
+
+  it("creates a plain-text Notepad PO download only", () => {
+    const downloads = buildPODownloadSet("POMTS001.00", "PO LINE 1\r\nPO LINE 2");
+
+    expect(downloads.notepad.fileName).toBe("POMTS001.txt");
+    expect(downloads).not.toHaveProperty("excel");
+    expect(downloads.notepad.content).toContain("PO LINE 1");
+  });
+
+  it("totals pallet counts from pallet quantity values instead of row count", () => {
+    const result = generatePOFile({
+      conversionId: "CNV-TEST-1",
+      header,
+      rows: [
+        {
+          excelRow: 2,
+          values: {
+            palletId: "P0001",
+            cartons: 40,
+            palletQuantity: 3,
+            country: "ZA",
+            nettMass: 1200,
+          },
+        },
+        {
+          excelRow: 3,
+          values: {
+            palletId: "P0002",
+            cartons: 20,
+            palletQuantity: 2,
+            country: "ZA",
+            nettMass: 1200,
+          },
+        },
+      ],
+    });
+
+    expect(result.palletCount).toBe(5);
+    expect(result.cartonCount).toBe(60);
+  });
+});
+
+describe("backend mapping", () => {
+  it("preserves separate barcode and pallet number mappings", () => {
+    const effective = resolveBackendMapping({
+      palletId: "Pallet Number",
+      sscc: "Barcode",
+    });
+
+    expect(effective.palletId).toBe("Pallet Number");
+    expect(effective.sscc).toBe("Barcode");
+  });
+
+  it("suggests barcode and pallet number as separate fields", () => {
+    const mapping = suggestMapping(["SSCC", "Barcode", "Pallet Number", "Cartons"]);
+
+    expect(mapping.palletId).toBe("Pallet Number");
+    expect(mapping.sscc).toBe("SSCC");
   });
 
   it("adds a clearer display label for known header aliases", () => {
@@ -221,7 +532,7 @@ describe("backend mapping", () => {
         "Load Reference": "REF123",
         "Location Code": "CPT0001",
         "Seal Number": "ZA123456",
-        "Organisation Code": "GG",
+        "Organisation Code": "GJ",
         "Stuff Date": "20260114",
         "Container Number": "MSDU9721477",
       },
@@ -229,7 +540,7 @@ describe("backend mapping", () => {
 
     const suggested = suggestHeaderValues(headers, previewRows);
 
-    expect(suggested.loadId).toBe("LOAD123");
+    expect(suggested).not.toHaveProperty("loadId");
     expect(suggested.loadReference).toBe("REF123");
     expect(suggested.locationCode).toBe("CPT0001");
     expect(suggested.sealNumber).toBe("ZA123456");
@@ -493,8 +804,8 @@ describe("PO generation", () => {
 
     expect(bh.slice(2, 5)).toBe("MTS");
     expect(bh.slice(5, 11)).toBe("000001");
-    expect(oh.slice(2, 12).trim()).toBe("MTS000001");
-    expect(oh.slice(12, 22).trim()).toBe("MTS000001");
+    expect(oh.slice(2, 12).trim()).toBe("MTS-000001");
+    expect(oh.slice(12, 22).trim()).toBe("MTS-000001");
   });
 
   it("generates exact record lengths", () => {
@@ -519,7 +830,7 @@ describe("PO generation", () => {
     expect(op.slice(12, 21).trim()).toBe("");
   });
 
-  it("places a 9 character pallet id at 13-21 and warns about blank SSCC", () => {
+  it("places a 18 character pallet id at 13-21 and warns about blank SSCC", () => {
     const op = lines[6];
 
     expect(op.slice(12, 21)).toBe("000123457");
@@ -610,10 +921,10 @@ describe("PO generation", () => {
             remarks: "REMARKS",
             reason: "REAS",
             shift: "D",
-            shiftDate: "20260115",
+            shiftDate: "2026/07/23",
             store: "ST",
             stockPool: "CE",
-            shippedDate: "20260115",
+            shippedDate: "2026/07/23",
             origCons: "OC12345678",
             shipNumber: "200045", 
             temperature: 2.5,
@@ -771,7 +1082,7 @@ describe("PO generation", () => {
           values: {
             palletId: "000000001",
             cartons: 1,
-            shippedDate: "2026072320:10",
+            shippedDate: "2026/07/23",
           },
         },
       ],
@@ -781,7 +1092,7 @@ describe("PO generation", () => {
 
     expect(op).toBeDefined();
     expect(bad.errors.some((error) => error.code === "INVALID_DATE")).toBe(false);
-    expect(op!.slice(206, 219).trim()).toBe("202607232010");
+    expect(op!.slice(206, 219).trim()).toBe("2026/07/23");
   });
 
   it("flags an over-long container number", () => {
@@ -801,7 +1112,7 @@ describe("PO generation", () => {
     ).toBe(true);
   });
 
-  it("warns when alpha fields are truncated and preserves sign in decimals", () => {
+  it("rejects alpha overflow and preserves sign in decimals", () => {
     const longProvider = "P".repeat(80);
     const res = generatePOFile({
       conversionId: "T7",
@@ -822,13 +1133,17 @@ describe("PO generation", () => {
       ],
     });
 
-    // BH provider field is 30 characters wide (30-59); builder allows truncate -> warning
-    expect(res.warnings.some((w) => w.code === "FIELD_TRUNCATED")).toBe(true);
+    // BH provider field is 30 characters wide (30-59); overflow is rejected.
+    expect(
+      res.errors.some(
+        (error) => error.code === "INVALID_FIELD_LENGTH" && error.field === "provider",
+      ),
+    ).toBe(true);
 
     // Negative decimal preserved with sign and fitted into 10 chars with 3 decimals
     const op = res.content.split(CRLF).find((l) => l.startsWith("OP"));
     expect(op).toBeDefined();
-    // nettMass at 334-342 (9 characters in spec here) — ensure '-' present
+    // nettMass at 334-342 (18 characters in spec here) — ensure '-' present
     const nett = op!.slice(333, 342);
     expect(nett.includes("-")).toBe(true);
   });
