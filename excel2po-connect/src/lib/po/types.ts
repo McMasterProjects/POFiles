@@ -1,7 +1,15 @@
 import type { FixedWidthError } from "./fixed-width";
 
 export type ValidationIssue = FixedWidthError;
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
+export type AppSettingsState = Record<string, JsonValue>;
 export interface POHeaderInput {
   sourceAddress: string;
   destinationAddress: string;
@@ -15,7 +23,7 @@ export interface POHeaderInput {
   containerNumber: string;
   sealNumber: string;
   consignmentNumber: string;
-  organisationCode: string;
+  organisationCode: string; 
   countryCode: string;
   channel: string;
   destinationType: string;
@@ -26,12 +34,14 @@ export interface POHeaderInput {
   provider: string;
   version: string;
   fileName?: string;
+  grossWeightOption?: string;
+  nettWeightOption?: string;
 }
 
 export const PALLET_FIELDS = [
   {
     key: "palletId",
-    label: "Pallet ID / Barcode",
+    label: "Pallet ID",
     recordType: "OP",
     from: 13,
     to: 21,
@@ -40,7 +50,7 @@ export const PALLET_FIELDS = [
   },
   {
     key: "sscc",
-    label: "SSCC",
+    label: "SSCC / Barcode",
     recordType: "OP",
     from: 316,
     to: 333,

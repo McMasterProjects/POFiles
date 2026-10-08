@@ -3,7 +3,6 @@ export type FieldAlign = "alpha" | "numeric";
 
 export interface FieldOptions {
   align?: FieldAlign;
-  allowTruncate?: boolean;
   pad?: string;
   field?: string;
   recordType?: string;
@@ -38,7 +37,6 @@ export function setFixedWidthField(
   const errors: FixedWidthError[] = [];
   const {
     align = "alpha",
-    allowTruncate = align === "numeric" ? false : false,
     field,
     recordType,
     excelRow,
@@ -60,42 +58,21 @@ export function setFixedWidthField(
   let raw = value === null || value === undefined ? "" : String(value);
   raw = raw.trim();
 
-  if (align === "alpha") {
-    raw = raw.replace(/[^A-Za-z0-9]/g, "");
-  }
-
   if (raw.length > width) {
-    if (allowTruncate) {
-      errors.push({
-        code: "FIELD_TRUNCATED",
-        severity: "warning",
-        message: `Value "${raw}" was truncated to ${width} characters.`,
-        recordType,
-        excelRow,
-        field,
-        fromPosition,
-        toPosition,
-        expectedLength: width,
-        actualLength: raw.length,
-        value: raw,
-      });
-      raw = raw.slice(0, width);
-    } else {
-      errors.push({
-        code: "INVALID_FIELD_LENGTH",
-        severity: "error",
-        message: `${field ?? "Field"} must be at most ${width} characters.`,
-        recordType,
-        excelRow,
-        field,
-        fromPosition,
-        toPosition,
-        expectedLength: width,
-        actualLength: raw.length,
-        value: raw,
-      });
-      raw = raw.slice(0, width);
-    }
+    errors.push({
+      code: "INVALID_FIELD_LENGTH",
+      severity: "error",
+      message: `${field ?? "Field"} must be at most ${width} characters.`,
+      recordType,
+      excelRow,
+      field,
+      fromPosition,
+      toPosition,
+      expectedLength: width,
+      actualLength: raw.length,
+      value: raw,
+    });
+    raw = raw.slice(0, width);
   }
 
   const padChar = options.pad ?? (align === "numeric" ? "0" : " ");

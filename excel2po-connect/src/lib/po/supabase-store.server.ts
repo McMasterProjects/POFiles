@@ -22,6 +22,7 @@ export async function saveConversion(record: ConversionRecord) {
   if (!supabase) return null;
   const { data, error } = await supabase.from(`${schema}.conversions`).upsert({
     id: record.id,
+    upload_id: record.uploadId,
     status: record.status,
     source_file_name: record.sourceFileName,
     output_file_name: record.outputFileName,
@@ -53,9 +54,45 @@ export async function saveMappingProfile(profile: MappingProfile) {
     name: profile.name,
     mapping: profile.mapping,
     created_at: profile.createdAt,
+    updated_at: profile.updatedAt ?? profile.createdAt,
   });
   if (error) throw error;
   return data;
+}
+
+export async function saveAppSettings(record: { key: string; value: Record<string, unknown>; updatedAt: string }) {
+  const supabase = getSupabaseServiceClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from(`${schema}.app_settings`).upsert({
+    setting_key: record.key,
+    value: record.value,
+    updated_at: record.updatedAt,
+  }, { onConflict: 'setting_key' });
+  if (error) throw error;
+  return data;
+}
+
+export async function loadAppSettings(key: string) {
+  const supabase = getSupabaseServiceClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from(`${schema}.app_settings`)
+    .select('value')
+    .eq('setting_key', key)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.value ?? null;
+}
+
+export async function loadConversions() {
+  const supabase = getSupabaseServiceClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from(`${schema}.conversions`)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ConversionRecord[];
 }
 
 export async function pushLogs(entries: any[]) {

@@ -1,7 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AppShell, Field, PageTitle } from "@/components/bc/shell";
+import {
+  AppShell,
+  PageHeader,
+  Section,
+  Input,
+  Checkbox,
+  Button,
+  Breadcrumb,
+} from "@/components/bc/shell";
+import { loadAppSettingsFn, saveAppSettingsFn } from "@/lib/po/conversion.functions";
 
 const KEY = "po-converter-settings";
 
@@ -42,10 +51,14 @@ function Settings() {
   const [settings, setSettings] = useState(DEFAULTS);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(KEY);
-      if (stored) setSettings({ ...DEFAULTS, ...JSON.parse(stored) });
-    } catch {}
+    void (async () => {
+      try {
+        const serverSettings = await loadAppSettingsFn();
+        const stored = window.localStorage.getItem(KEY);
+        const parsed = serverSettings ?? (stored ? JSON.parse(stored) : null);
+        if (parsed) setSettings({ ...DEFAULTS, ...parsed });
+      } catch {}
+    })();
   }, []);
 
   const set = (key: keyof typeof DEFAULTS, value: string | boolean) =>
@@ -53,100 +66,105 @@ function Settings() {
 
   return (
     <AppShell>
-      <PageTitle title="Settings" subtitle="Defaults applied to new conversions." />
-      <div className="bc-card max-w-3xl p-3">
-        <div className="grid gap-2 md:grid-cols-3">
-          <Field
-            label="Default source address"
-            value={settings.sourceAddress}
-            onChange={(v) => set("sourceAddress", v)}
-            maxLength={3}
-          />
-          <Field
-            label="Default destination address"
-            value={settings.destinationAddress}
-            onChange={(v) => set("destinationAddress", v)}
-            maxLength={3}
-          />
-          <Field label="Provider" value={settings.provider} onChange={(v) => set("provider", v)} />
-          <Field label="Version" value={settings.version} onChange={(v) => set("version", v)} />
-          <Field
-            label="Default organisation"
-            value={settings.organisationCode}
-            onChange={(v) => set("organisationCode", v)}
-            maxLength={2}
-          />
-          <Field
-            label="Default country"
-            value={settings.countryCode}
-            onChange={(v) => set("countryCode", v)}
-            maxLength={2}
-          />
-          <Field
-            label="Default channel"
-            value={settings.channel}
-            onChange={(v) => set("channel", v)}
-            maxLength={1}
-          />
-          <Field
-            label="Output encoding"
-            value={settings.encoding}
-            onChange={(v) => set("encoding", v)}
-          />
-          <Field
-            label="File retention (days)"
-            value={settings.retentionDays}
-            onChange={(v) => set("retentionDays", v)}
-          />
-        </div>
+      <div className="space-y-4">
+        <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Settings" }]} />
 
-        <div className="mt-3 space-y-1 text-[12.5px]">
-          <Toggle
-            label="Enforce CRLF line endings"
-            checked={settings.enforceCRLF}
-            onChange={(v) => set("enforceCRLF", v)}
-          />
-          <Toggle
-            label="Allow alpha truncation"
-            checked={settings.allowAlphaTruncation}
-            onChange={(v) => set("allowAlphaTruncation", v)}
-          />
-          <Toggle
-            label="Treat warnings as errors"
-            checked={settings.treatWarningsAsErrors}
-            onChange={(v) => set("treatWarningsAsErrors", v)}
-          />
-        </div>
+        <PageHeader title="Settings" subtitle="Configure default values for your conversions" />
 
-        <button
-          className="mt-3 rounded-[2px] bg-primary px-3 py-1 text-[12.5px] text-primary-foreground hover:bg-primary/90"
-          onClick={() => {
-            try {
-              window.localStorage.setItem(KEY, JSON.stringify(settings));
-            } catch {}
-            toast.success("Settings saved");
-          }}
-        >
-          Save settings
-        </button>
+        <Section title="Header Defaults" collapsible={false}>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Input
+              label="Source Address"
+              value={settings.sourceAddress}
+              onChange={(v) => set("sourceAddress", v)}
+              maxLength={3}
+            />
+            <Input
+              label="Destination Address"
+              value={settings.destinationAddress}
+              onChange={(v) => set("destinationAddress", v)}
+              maxLength={3}
+            />
+            <Input
+              label="Provider"
+              value={settings.provider}
+              onChange={(v) => set("provider", v)}
+            />
+            <Input
+              label="Version"
+              value={settings.version}
+              onChange={(v) => set("version", v)}
+            />
+            <Input
+              label="Organisation Code"
+              value={settings.organisationCode}
+              onChange={(v) => set("organisationCode", v)}
+              maxLength={2}
+            />
+            <Input
+              label="Country Code"
+              value={settings.countryCode}
+              onChange={(v) => set("countryCode", v)}
+              maxLength={2}
+            />
+            <Input
+              label="Channel"
+              value={settings.channel}
+              onChange={(v) => set("channel", v)}
+              maxLength={1}
+            />
+            <Input
+              label="Output Encoding"
+              value={settings.encoding}
+              onChange={(v) => set("encoding", v)}
+            />
+            <Input
+              label="File Retention (days)"
+              value={settings.retentionDays}
+              onChange={(v) => set("retentionDays", v)}
+            />
+          </div>
+        </Section>
+
+        <Section title="Validation Options" collapsible={false}>
+          <div className="space-y-3">
+            <Checkbox
+              label="Enforce CRLF line endings"
+              checked={settings.enforceCRLF}
+              onChange={(v) => set("enforceCRLF", v)}
+            />
+            <Checkbox
+              label="Allow alpha truncation"
+              checked={settings.allowAlphaTruncation}
+              onChange={(v) => set("allowAlphaTruncation", v)}
+            />
+            <Checkbox
+              label="Treat warnings as errors"
+              checked={settings.treatWarningsAsErrors}
+              onChange={(v) => set("treatWarningsAsErrors", v)}
+            />
+          </div>
+        </Section>
+
+        <div className="flex gap-2">
+          <Button
+            primary
+            onClick={async () => {
+              try {
+                try {
+                  window.localStorage.setItem(KEY, JSON.stringify(settings));
+                } catch {}
+                await saveAppSettingsFn({ data: settings });
+                toast.success("Settings saved successfully");
+              } catch {
+                toast.error("Failed to save settings");
+              }
+            }}
+          >
+            Save Settings
+          </Button>
+        </div>
       </div>
     </AppShell>
-  );
-}
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center gap-2">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {label}
-    </label>
   );
 }

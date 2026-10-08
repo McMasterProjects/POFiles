@@ -1,13 +1,14 @@
-import { RecordWriter, type FixedWidthError } from "./fixed-width";
+﻿import { RecordWriter, type FixedWidthError } from "./fixed-width";
 import {
   formatDecimal,
   formatInteger,
   formatPODate,
   formatPODateTime,
+  formatShippedDate,
   formatPOTime,
-  isValidSSCC,
   toNumber,
   toPlainText,
+  validateAndFormatSSCC,
 } from "./format";
 import { lookupCode } from "./code-tables";
 import type { PalletRow, POHeaderInput } from "./types";
@@ -44,10 +45,15 @@ export function makeContext(header: POHeaderInput): Ctx {
   const now = new Date();
   const sequenceSource = header.sequenceNumber?.trim() || header.batchNumber?.trim() || "1";
   const sequenceValue = Number.parseInt(sequenceSource, 10);
-  const fileSequence = String(Number.isNaN(sequenceValue) ? 1 : sequenceValue).padStart(3, "0");
-  const batchNumber = String(Number.isNaN(sequenceValue) ? 1 : sequenceValue).padStart(6, "0");
-  const fromDepot = (header.sourceAddress?.trim() || "000").slice(0, 3);
-  const loadId = (header.loadId?.trim() || `${fromDepot}-${batchNumber}`).slice(0, 10);
+  const normalizedSequence = Number.isNaN(sequenceValue)
+    ? 1
+    : ((sequenceValue - 1) % 999 + 999) % 999 + 1;
+  const fileSequence = String(normalizedSequence).padStart(3, "0");
+  const batchNumber = String(normalizedSequence).padStart(6, "0");
+  const fromDepot = header.sourceAddress?.trim() || "000";
+  const suppliedLoadId = header.loadId?.trim();
+  const internalLoadId = suppliedLoadId?.replace(/^[^-]+-/, "") || batchNumber;
+  const loadId = `${fromDepot}-${internalLoadId.padStart(6, "0")}`;
   return {
     header,
     loadId,
@@ -67,8 +73,8 @@ export function buildBHRecord(ctx: Ctx): BuiltRecord {
   w.put(12, 19, ctx.transactionDate, { field: "transactionDate" });
   w.put(20, 27, `${ctx.transactionTime}:00`, { field: "transactionTime" });
   w.put(28, 29, "", { field: "indicator" });
-  w.put(30, 59, (h.provider || "Paltrack").trim(), { field: "provider", allowTruncate: true });
-  w.put(60, 89, (h.version || "2.18").trim(), { field: "version", allowTruncate: true });
+  w.put(30, 59, (h.provider || "Paltrack").trim(), { field: "provider" });
+  w.put(60, 89, (h.version || "2.18").trim(), { field: "version" });
   const { line, errors } = w.done();
   return { recordType: "BH", line, errors };
 }
@@ -137,11 +143,12 @@ export function buildOKRecord(ctx: Ctx, palletCount: number): BuiltRecord {
 
 export function buildOCRecord(ctx: Ctx, palletCount: number, cartonCount: number): BuiltRecord {
   const h = ctx.header;
+  const organisationCode = h.organisationCode.trim().toUpperCase();
   const w = new RecordWriter(RECORD_LENGTHS.OC, "OC");
   w.put(1, 2, "OC", { field: "recordType" });
   w.put(3, 12, ctx.loadId, { field: "loadId" });
   w.put(13, 19, h.locationCode, { field: "locationCode" });
-  w.put(20, 21, h.organisationCode, { field: "organisationCode" });
+  w.put(20, 21, organisationCode, { field: "organisationCode" });
   w.put(22, 31, h.consignmentNumber, { field: "consignmentNumber" });
   w.put(32, 33, "OT", { field: "consignmentType" });
   w.put(34, 41, h.stuffingDate?.trim() || ctx.transactionDate, { field: "stuffingDate" });
@@ -158,12 +165,16 @@ export function buildOCRecord(ctx: Ctx, palletCount: number, cartonCount: number
 
 export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): BuiltRecord {
   const h = ctx.header;
+  const organisationCode = h.organisationCode.trim().toUpperCase();
   const v = row.values;
   const w = new RecordWriter(RECORD_LENGTHS.OP, "OP", row.excelRow);
   const get = (key: keyof typeof v) => toPlainText(v[key]);
 
   const palletId = get("palletId");
-  const ssccRaw = get("sscc") || (palletId.length === 18 ? palletId : "");
+  const barcodeValue = toPlainText(v.palletId);
+  const ssccRaw =
+    toPlainText(v.sscc) ||
+    (organisationCode === "AO" || barcodeValue.length === 18 ? barcodeValue : "");
 
   w.put(1, 2, "OP", { field: "recordType" });
   w.put(3, 12, ctx.loadId, { field: "loadId" });
@@ -176,7 +187,7 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
   w.put(61, 71, h.containerNumber, { field: "containerNumber" });
   w.put(72, 72, "N", { field: "containerSplit" });
   w.put(73, 73, h.channel || "E", { field: "channel" });
-  w.put(74, 75, h.organisationCode, { field: "organisation" });
+  w.put(74, 75, organisationCode, { field: "organisation" });
   w.put(76, 77, codeOrError(w, "country", v.country, 2, 76, 77, "country", row.excelRow), {
     field: "country",
   });
@@ -214,7 +225,7 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
   w.put(196, 202, h.locationCode, { field: "locationCode" });
   w.put(203, 204, get("store"), { field: "store" });
   w.put(205, 206, get("stockPool"), { field: "stockPool" });
-  w.put(207, 219, dateTimeOrError(w, v.shippedDate, "shippedDate", 207, 219, row.excelRow), {
+  w.put(207, 219, shippedDateOrError(w, v.shippedDate, "shippedDate", 207, 219, row.excelRow), {
     field: "shippedDate",
   });
   w.put(220, 220, "Y", { field: "transmitFlag" });
@@ -238,12 +249,14 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
   w.put(308, 313, get("boeNo"), { field: "boeNo" });
   w.put(314, 315, get("principal"), { field: "principal" });
 
+  const ssccValidation = validateAndFormatSSCC(ssccRaw || palletId, organisationCode);
+
   if (ssccRaw) {
-    if (!isValidSSCC(ssccRaw)) {
+    if (!ssccValidation.success) {
       w.errors.push({
         code: "INVALID_SSCC",
         severity: "error",
-        message: "SSCC must contain exactly 18 digits.",
+        message: ssccValidation.error ?? "SSCC must contain exactly 18 digits.",
         recordType: "OP",
         excelRow: row.excelRow,
         field: "sscc",
@@ -254,12 +267,12 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
         value: ssccRaw,
       });
     }
-    w.put(316, 333, ssccRaw, { field: "sscc" });
+    w.put(316, 333, ssccValidation.success ? ssccValidation.value : ssccRaw, { field: "sscc" });
   } else {
     w.errors.push({
       code: "SSCC_BLANK",
       severity: "warning",
-      message: "SSCC is blank; only a 9-character pallet ID was supplied.",
+      message: "SSCC is blank; only a 18-character pallet ID was supplied.",
       recordType: "OP",
       excelRow: row.excelRow,
       field: "sscc",
@@ -292,7 +305,7 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
   w.put(492, 497, get("inspector"), { field: "inspector" });
   w.put(498, 503, get("inspectionPoint"), { field: "inspectionPoint" });
   w.put(504, 513, get("expiryCode"), { field: "expiryCode" });
-  w.put(514, 528, get("orchard"), { field: "orchard", allowTruncate: true });
+  w.put(514, 528, get("orchard"), { field: "orchard" });
   w.put(529, 533, get("targetRegion"), { field: "targetRegion" });
   w.put(
     534,
@@ -321,8 +334,8 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
   );
   w.put(623, 642, get("productionId"), { field: "productionId" });
   w.put(643, 644, get("protocolExceptionIndicator"), { field: "protocolExceptionIndicator" });
-  w.put(645, 669, get("upn"), { field: "upn", allowTruncate: true });
-  w.put(670, 699, get("palletTreatment"), { field: "palletTreatment", allowTruncate: true });
+  w.put(645, 669, get("upn"), { field: "upn" });
+  w.put(670, 699, get("palletTreatment"), { field: "palletTreatment" });
   if (sequence === 1) {
     w.num(700, 709, formatDecimal(v.grossMass, 10, 3), { field: "palletGrossMass" });
   } else {
@@ -337,13 +350,13 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
     { field: "weighingDateTime" },
   );
   w.put(740, 741, get("mainArea"), { field: "mainArea" });
-  w.put(742, 757, get("productionArea"), { field: "productionArea", allowTruncate: true });
-  w.put(758, 767, get("phytoData"), { field: "phytoData", allowTruncate: true });
-  w.put(768, 807, get("custOrd"), { field: "custOrd", allowTruncate: true });
+  w.put(742, 757, get("productionArea"), { field: "productionArea" });
+  w.put(758, 767, get("phytoData"), { field: "phytoData" });
+  w.put(768, 807, get("custOrd"), { field: "custOrd" });
   w.put(808, 817, get("reInspectionDocument"), { field: "reInspectionDocument" });
   w.put(818, 827, get("eLotKey"), { field: "eLotKey" });
   w.put(828, 837, get("agreementCode"), { field: "agreementCode" });
-  w.put(838, 977, get("postTreatment"), { field: "postTreatment", allowTruncate: true });
+  w.put(838, 977, get("postTreatment"), { field: "postTreatment" });
   w.put(978, 997, get("referenceNumber"), { field: "referenceNumber" });
   w.put(998, 1012, get("eLotKey"), { field: "eLotKey" });
 
@@ -351,7 +364,7 @@ export function buildOPRecord(ctx: Ctx, row: PalletRow, sequence: number): Built
     w.errors.push({
       code: "MISSING_REQUIRED_FIELD",
       severity: "error",
-      message: "Pallet ID / barcode is required.",
+      message: "Pallet ID is required.",
       recordType: "OP",
       excelRow: row.excelRow,
       field: "palletId",
@@ -394,7 +407,7 @@ export function buildBTRecord(
   const w = new RecordWriter(RECORD_LENGTHS.BT, "BT");
   w.put(1, 2, "BT", { field: "recordType" });
   w.put(3, 5, h.sourceAddress, { field: "sourceAddress" });
-  w.num(6, 11, formatInteger(h.batchNumber, 6), { field: "batchNumber" });
+  w.num(6, 11, ctx.batchNumber, { field: "batchNumber" });
   w.num(12, 18, formatInteger(counts.recordCount, 7), { field: "recordCount" });
   w.num(19, 23, formatInteger(counts.oh, 5), { field: "ohCount" });
   w.num(24, 28, formatInteger(counts.ol, 5), { field: "olCount" });
@@ -477,3 +490,42 @@ function dateTimeOrError(
   }
   return formatted;
 }
+
+
+function shippedDateOrError(
+  w: RecordWriter,
+  raw: unknown,
+  field: string,
+  from: number,
+  to: number,
+  excelRow?: number,
+): string {
+  if (
+    raw === null ||
+    raw === undefined ||
+    String(raw).trim() === ""
+  ) {
+    return "";
+  }
+
+  const formatted = formatShippedDate(raw);
+
+  if (!formatted) {
+    w.errors.push({
+      code: "INVALID_DATE",
+      severity: "error",
+      message: `"${String(raw)}" is not a valid shipped date (expected yyyy/MM/dd).`,
+      recordType: "OP",
+      excelRow,
+      field,
+      fromPosition: from,
+      toPosition: to,
+      value: String(raw),
+    });
+
+    return "";
+  }
+
+  return formatted;
+}
+

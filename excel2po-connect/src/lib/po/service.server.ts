@@ -1,7 +1,20 @@
-import { inspectWorkbook, readSheetRows } from "./excel.server";
+import {
+  inspectTransmission,
+  inspectWorkbook,
+  isPaltrackTransmission,
+  readSheetRows,
+} from "./excel.server";
 import { applyMapping, suggestHeaderValues, suggestMapping } from "./mapping";
 import { generatePOFile, getNextSequenceNumber } from "./generator";
-import { logEvent, newId, pushLogs, store, type ConversionRecord } from "./store.server";
+import {
+  logEvent,
+  newId,
+  pushLogs,
+  saveConversionRecord,
+  saveUploadRecord,
+  store,
+  type ConversionRecord,
+} from "./store.server";
 import type { ColumnMapping, POHeaderInput, ValidationIssue } from "./types";
 
 function rowsToStringPreview(rows: Record<string, unknown>[]) {
@@ -17,10 +30,44 @@ export function inferHeaderFromRows(headers: string[], rows: Record<string, unkn
   return suggestHeaderValues(headers, previewRows);
 }
 
+export function buildPODownloadSet(fileName: string, content: string) {
+  const baseName = fileName.replace(/\.[^.]+$/, "");
+  const normalized = content.endsWith("\r\n") || content.endsWith("\n") ? content : `${content}\r\n`;
+
+  return {
+    notepad: {
+      fileName: `${baseName}.txt`,
+      content: normalized,
+    },
+  };
+}
+
 function mergeSuggestions<T extends object>(base: T, fallback: Partial<T>) {
   return Object.fromEntries(
     Object.entries(base).map(([key, value]) => [key, value ?? fallback[key as keyof T]]),
   ) as T;
+}
+
+function transmissionField(base64: string, recordType: string, from: number, to: number) {
+  const line = Buffer.from(base64, "base64")
+    .toString("latin1")
+    .split(/\r?\n/)
+    .find((value) => value.slice(0, 2) === recordType);
+  return line?.slice(from - 1, to).trim() ?? "";
+}
+
+function inferTransmissionHeader(base64: string) {
+  return {
+    sourceAddress: transmissionField(base64, "OH", 3, 5),
+    locationCode: transmissionField(base64, "OC", 13, 19),
+    consignmentNumber: transmissionField(base64, "OC", 22, 31),
+    organisationCode:
+      transmissionField(base64, "OC", 20, 21) || transmissionField(base64, "OP", 74, 75),
+    channel: transmissionField(base64, "OC", 48, 48),
+    stuffingDate: transmissionField(base64, "OC", 34, 41),
+    destinationType: transmissionField(base64, "OP", 42, 43),
+    destinationLocation: transmissionField(base64, "OP", 44, 50),
+  };
 }
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -32,24 +79,34 @@ export function handleUpload(input: {
   sheetName?: string;
 }) {
   const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
-  if (!safeName.toLowerCase().endsWith(".xlsx")) {
-    throw new Error("Only .xlsx files are accepted.");
+  const isExcel = safeName.toLowerCase().endsWith(".xlsx");
+  const isTransmission = safeName.toLowerCase().endsWith(".000");
+  if (!isExcel && !isTransmission) {
+    throw new Error("Only .xlsx Excel files or .000 sions are accepted.");
   }
   if (input.fileSize > MAX_UPLOAD_BYTES) {
     throw new Error("File exceeds the 20 MB upload limit.");
   }
 
   const uploadId = newId("UPL");
-  const inspection = inspectWorkbook(input.base64, input.sheetName);
-  const suggestedHeaderValues = suggestHeaderValues(inspection.headers, inspection.previewRows);
+  const transmission = isTransmission || isPaltrackTransmission(input.base64);
+  const inspection = transmission
+    ? inspectTransmission(input.base64)
+    : inspectWorkbook(input.base64, input.sheetName);
+  const suggestedHeaderValues = transmission
+    ? inferTransmissionHeader(input.base64)
+    : suggestHeaderValues(inspection.headers, inspection.previewRows);
 
-  store.uploads.set(uploadId, {
+  const uploadRecord = {
     uploadId,
     fileName: safeName,
     fileSize: input.fileSize,
     base64: input.base64,
     uploadedAt: new Date().toISOString(),
-  });
+  };
+
+  store.uploads.set(uploadId, uploadRecord);
+  void saveUploadRecord(uploadRecord);
 
   logEvent(uploadId, "upload", "File received", { message: safeName });
   logEvent(uploadId, "excel-reader", "Excel opened", {
@@ -65,7 +122,9 @@ export function handleUpload(input: {
     fileName: safeName,
     fileSize: input.fileSize,
     uploadedAt: new Date().toISOString(),
-    suggestedMapping: suggestMapping(inspection.headers),
+    suggestedMapping: transmission
+      ? Object.fromEntries(inspection.headers.map((field) => [field, field]))
+      : suggestMapping(inspection.headers),
     suggestedHeaderValues,
     ...inspection,
   };
@@ -73,12 +132,19 @@ export function handleUpload(input: {
 
 export function inspectSheet(uploadId: string, sheetName: string) {
   const upload = requireUpload(uploadId);
-  const inspection = inspectWorkbook(upload.base64, sheetName);
+  const transmission = isPaltrackTransmission(upload.base64);
+  const inspection = transmission
+    ? inspectTransmission(upload.base64)
+    : inspectWorkbook(upload.base64, sheetName);
   logEvent(uploadId, "excel-reader", "Worksheet selected", { message: inspection.sheetName });
   return {
     ...inspection,
-    suggestedMapping: suggestMapping(inspection.headers),
-    suggestedHeaderValues: suggestHeaderValues(inspection.headers, inspection.previewRows),
+    suggestedMapping: transmission
+      ? Object.fromEntries(inspection.headers.map((field) => [field, field]))
+      : suggestMapping(inspection.headers),
+    suggestedHeaderValues: transmission
+      ? inferTransmissionHeader(upload.base64)
+      : suggestHeaderValues(inspection.headers, inspection.previewRows),
   };
 }
 
@@ -137,6 +203,7 @@ export function runConversion(input: {
 
   const record: ConversionRecord = {
     id: conversionId,
+    uploadId: upload.uploadId,
     status: result.status,
     sourceFileName: upload.fileName,
     outputFileName: result.fileName,
@@ -159,6 +226,7 @@ export function runConversion(input: {
 
   if (input.persist) {
     store.conversions.set(conversionId, record);
+    void saveConversionRecord(record);
   }
 
   return {

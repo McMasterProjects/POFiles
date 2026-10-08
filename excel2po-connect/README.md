@@ -1,443 +1,122 @@
-# Excel to PO Forge
+# Excel2PO
 
-Paste the following into Lovable:
+Excel2PO is a browser-based tool for converting spreadsheet data into fixed-width PO transmission files used in a Business Central-style workflow.
 
-Build a production-ready web application called “Excel to PO Converter”.
+It lets you upload an Excel workbook, map the columns to PO fields, validate the generated payload, and export the final text output for downstream transmission.
 
-The application must convert an uploaded Excel file into a Paltrack-style fixed-width PO transmission file that can be opened in Notepad and downloaded with a .000 extension.
+## Features
 
-The application must prioritise backend functionality, validation, debugging, logging and maintainability over visual effects.
+- Upload `.xlsx` files and inspect worksheet data
+- Map source columns to PO field definitions
+- Save and reuse mapping profiles
+- Validate generated PO data before export
+- Generate fixed-width output with CRLF formatting
+- Preview and download the final file
+- Track conversion history, validation issues, logs, and settings
+- Optional persistence with Supabase
 
-==================================================
-1. ARCHITECTURE
-==================================================
+## Tech stack
 
-Use a cleanly separated frontend and backend architecture.
+- React + TypeScript
+- Vite + TanStack Router + TanStack Start
+- Tailwind styling with BC-inspired UI components
+- `xlsx` for workbook parsing
+- `zod` for validation
+- Vitest for tests
+- Optional Supabase storage
 
-Project structure:
+## Quick start
 
-/frontend
-/backend
-/shared
-/docs
+### Prerequisites
 
-Frontend:
-- React
-- TypeScript
-- Vite
-- Fluent UI or a custom Microsoft Dynamics 365 Business Central-inspired design system
-- Axios or a typed API client
-- No PO conversion logic in the frontend
+- Node.js 18+
+- npm
 
-Backend:
-- Node.js
-- TypeScript
-- Express or Fastify
-- All Excel parsing, field mapping, fixed-width formatting, validation and file generation must happen in the backend
-- Use ExcelJS for reading Excel files
-- Use Zod for request and mapping validation
-- Use structured logging with Pino
-- Use Jest or Vitest for unit tests
-- Add Swagger/OpenAPI documentation
-- Keep backend code modular and easy to debug
+### Install
 
-The frontend and backend must run independently.
+```bash
+npm install
+```
 
-Frontend environment variable:
+### Run locally
 
-VITE_API_BASE_URL=http://localhost:3001/api
+```bash
+npm run dev
+```
 
-Backend environment variables:
+### Production build
 
-PORT=3001
-LOG_LEVEL=debug
-MAX_UPLOAD_SIZE_MB=20
-OUTPUT_DIRECTORY=./output
+```bash
+npm run build
+```
 
-Do not tightly couple the frontend to the backend.
+### Run tests
 
-==================================================
-2. MAIN PURPOSE
-==================================================
+```bash
+npm test
+```
 
-The user must be able to:
+### Lint
 
-1. Upload an Excel file.
-2. Preview the Excel data.
-3. Map Excel columns to PO fields.
-4. Validate the data.
-5. Generate a correctly structured fixed-width PO file.
-6. Preview the PO file as plain text.
-7. Download the PO file with a .000 extension.
-8. Download a validation report.
-9. View detailed processing logs.
-10. Identify exactly which row and field caused an error.
+```bash
+npm run lint
+```
 
-The generated file must open correctly in Windows Notepad.
+## Environment variables
 
-Use Windows CRLF line endings.
+The app works without Supabase for local conversion tasks, but if you want to enable saved profiles/history/settings, add a `.env` file in the project root:
 
-## Deployment
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
 
-This project can be deployed repeatedly to Vercel through GitHub Actions.
+If these values are not configured, the app still runs in local mode and skips persistence features.
 
-### Required GitHub secrets
+## Project structure
 
-Create these repository secrets in GitHub:
+- `src/routes/` — application screens and routing
+- `src/lib/po/` — conversion, validation, and PO generation logic
+- `src/components/bc/` — reusable BC-inspired UI shell components
+- `src/tests/` — regression tests for the PO conversion flow
+- `supabase/migrations/` — database schema used for optional persistence
+- `README_SUPABASE.md` — Supabase-specific setup notes
 
-- VERCEL_TOKEN
-- VERCEL_ORG_ID
-- VERCEL_PROJECT_ID
+## Typical workflow
 
-Once configured, every push to the main branch will trigger a production deployment automatically.
+1. Upload an Excel workbook
+2. Select the sheet to convert
+3. Map columns to the required PO fields
+4. Review the generated header defaults
+5. Validate the output
+6. Generate and preview the final PO text
+7. Download the file
 
-Do not generate CSV output.
+## Output behavior
 
-Do not separate fields with commas, tabs, semicolons or pipes.
+The converter builds a Paltrack-style fixed-width PO message with standard record blocks such as header, order, and trailer sections. Validation checks include record length consistency, totals, and known PO field constraints before the output is treated as valid.
 
-The PO file is a fixed-width plain-text file.
+## Optional Supabase setup
 
-==================================================
-3. BUSINESS CENTRAL-STYLE UI
-==================================================
+The project includes the migration file:
 
-Make the interface look similar to Microsoft Dynamics 365 Business Central.
+- `supabase/migrations/001_create_po_tables.sql`
 
-Use:
+To enable persistence:
 
-- Segoe UI font
-- White and very light grey backgrounds
-- Dark blue page headings
-- A left navigation rail
-- A Business Central-style command bar
-- Compact tables
-- Subtle borders
-- Flat buttons
-- Minimal rounded corners
-- Status indicators
-- FactBox-style side panels
-- Fast, professional and business-focused design
-- No gradients
-- No oversized cards
-- No excessive animations
-- No landing-page marketing design
-
-Main navigation:
-
-- Dashboard
-- Convert Excel
-- Mapping Profiles
-- Conversion History
-- Validation Errors
-- System Logs
-- Settings
+1. Create a Supabase project
+2. Open the SQL editor
+3. Run the migration
+4. Add the environment variables above
 
-The default page must be “Convert Excel”.
+For more detail, see [README_SUPABASE.md](README_SUPABASE.md).
 
-Page title:
+## Notes
 
-Excel to PO Conversion
-
-Command bar actions:
-
-- Upload Excel
-- Load Sample PO
-- Validate
-- Generate PO
-- Download PO
-- Download Validation Report
-- Clear
-- Refresh
-
-Use Business Central-style status colours:
-
-- Green: Valid
-- Red: Error
-- Orange: Warning
-- Blue: Processing
-- Grey: Not processed
-
-==================================================
-4. CONVERSION WORKFLOW
-==================================================
-
-Step 1: Upload Excel
-
-Allow the user to drag and drop or browse for an .xlsx file.
-
-Display:
-
-- File name
-- File size
-- Sheet names
-- Number of rows
-- Number of columns
-- Upload date and time
-
-Step 2: Select worksheet
-
-Allow the user to choose which worksheet contains the pallet data.
-
-Step 3: Map columns
-
-Display two columns:
-
-Excel Column
-PO Field
-
-Automatically suggest mappings based on column names.
-
-Allow the user to save a mapping profile.
-
-Example mapping profiles:
-
-- Paltrack PO
-- Packhouse PO
-- Cold Store PO
-- Custom PO
-
-Step 4: Enter header information
-
-Create a Business Central-style FastTab called “PO Header”.
-
-Fields:
-
-- Source Address
-- Destination Address
-- Sequence Number
-- Batch Number
-- Load ID
-- Load Reference
-- Location Code
-- Container Number
-- Seal Number
-- Consignment Number
-- Organisation Code
-- Country Code
-- Channel
-- Destination Type
-- Destination Location
-- Stuffing Date
-- Transaction Date
-- Transaction Time
-- Provider
-- Version
-- File Name
-
-Automatically generate the file name using:
-
-PO + source address + sequence number + . + destination address
-
-Example:
-
-POEGJ465.000
-
-Allow the user to override the generated file name.
-
-Step 5: Validate
-
-Run backend validation before generation.
-
-Step 6: Generate
-
-Generate the complete fixed-width PO file.
-
-Step 7: Preview
-
-Show the generated file in a monospaced text preview.
-
-Use a fixed-width font such as Consolas.
-
-Allow horizontal scrolling.
-
-Display line numbers.
-
-Step 8: Download
-
-Download the generated file with:
-
-- .000 extension
-- plain-text content
-- CRLF line endings
-- no UTF-8 BOM unless specifically configured
-
-==================================================
-5. REQUIRED RECORD STRUCTURE
-==================================================
-
-The PO file must be generated in this nested sequence:
-
-BH
-OH
-OL
-OK
-OC
-OP
-OP
-OP
-...
-BT
-
-Support multiple OL, OK, OC and OP records in the future, but the first version may generate:
-
-- 1 BH
-- 1 OH
-- 1 OL
-- 1 OK
-- 1 OC
-- multiple OP records
-- 1 BT
-
-Every line must begin with its two-character record type.
-
-Record definitions:
-
-BH = Batch Header
-OH = Truck Header
-OL = Transport Location
-OK = Container Record
-OC = Consignment Record
-OP = Pallet Record
-BT = Batch Trailer
-
-The backend must not generate the file by manually concatenating random values.
-
-Create reusable fixed-width record builders.
-
-Example:
-
-buildBHRecord()
-buildOHRecord()
-buildOLRecord()
-buildOKRecord()
-buildOCRecord()
-buildOPRecord()
-buildBTRecord()
-
-Create a general helper:
-
-setFixedWidthField(buffer, fromPosition, toPosition, value, options)
-
-Positions are 1-based and inclusive.
-
-The helper must:
-
-- Convert values to strings
-- Trim values
-- Prevent values from overlapping other fields
-- Truncate alpha values only when explicitly allowed
-- Right-align numeric fields
-- Left-align alpha fields
-- Pad numeric fields with zeroes where required
-- Pad alpha fields with spaces
-- Validate field lengths
-- Return descriptive errors
-- Preserve exact character positions
-
-==================================================
-6. RECORD LENGTHS
-==================================================
-
-Use the configured Paltrack record layout.
-
-Required default record lengths:
-
-BH: 89 characters
-OH: 309 characters
-OL: 100 characters
-OK: 370 characters
-OC: 220 characters
-OP: 1012 characters
-BT: 60 characters
-
-The backend must verify every generated record length before allowing download.
-
-If a record is too short or too long, block generation and return:
-
-- Record type
-- Row number
-- Expected length
-- Actual length
-- Field that caused the problem
-
-==================================================
-7. IMPORTANT OP FIELD POSITIONS
-==================================================
-
-Build the OP pallet record using exact fixed-width positions.
-
-Important fields include:
-
-- Record Type: 1–2
-- Load ID: 3–12
-- Pallet ID: 13–21
-- Sequence Number: 22–26
-- Unit Type: 27
-- Destination Type: 42–43
-- Destination Location: 44–50
-- Consignment Number: 51–60
-- Container Number: 61–71
-- Container Split: 72
-- Channel: 73
-- Organisation: 74–75
-- Country: 76–77
-- Commodity Group: 78–79
-- Commodity: 80–81
-- Variety Group: 82–83
-- Variety: 84–86
-- Sub Variety: 87–89
-- Actual Variety: 90–92
-- Pack: 93–96
-- Grade: 97–100
-- Mark: 101–105
-- Size Count: 106–110
-- Farm: 117–123
-- Target Market: 129–130
-- Carton Quantity: 131–135
-- Pallet Quantity: 136–144
-- Mixed Indicator: 145
-- Intake Date: 158–165
-- Original Depot: 166–172
-- Original Intake Date: 173–180
-- Shift: 181
-- Shift Date: 182–189
-- Order Number: 190–195
-- Location Code: 196–202
-- Shipped Date: 207–219
-- Transmit Flag: 220
-- Revision: 221–225
-- Message Number: 226–233
-- Transaction User: 234–240
-- Transaction Date: 241–248
-- Transaction Time: 249–253
-- Pallet Bin Type: 254
-- Original Consignment: 255–264
-- Ship Number: 265–270
-- Temperature: 271–276
-- SSCC: 316–333
-- Nett Mass: 334–342
-- Inspection Date: 397–404
-- Batch Number: 407–426
-- Waybill Number: 427–436
-- GTIN: 437–450
-- Packhouse Code: 451–457
-- Inspector: 492–497
-- Inspection Point: 498–503
-- Orchard: 514–528
-- Target Region: 529–533
-- Target Country: 534–535
-- Global GAP Number: 536–555
-- Lot Number: 556–575
-- Traceability Code: 576–595
-- Season: 596–599
-- Original Inspection Date: 600–607
-- Inner Pack: 608–617
-- Inner Cartons: 618–622
-- Production ID: 623–642
-- Protocol Exception Indicator: 643–644
-- UPN: 645–669
-- Pallet Treatment: 670–699
-- Pallet Gross Mass: 700–709
+- The main conversion flow is designed for `.xlsx` files.
+- Uploads are limited to the app's configured size threshold.
+- The generated output is plain text fixed-width PO data intended for downstream transmission workflows.
+- The app keeps a BC-style interface pattern while remaining browser-based and lightweight.
 - SAMSA Accreditation: 710–719
 - Weighing Location: 720–726
 - Weighing Date Time: 727–739
@@ -471,23 +150,23 @@ Unknown descriptions must generate a warning or error instead of silently trunca
 8. SSCC AND PALLET ID RULES
 ==================================================
 
-Support both:
+Support a single 18-character barcode/SSCC value:
 
-- 9-character pallet ID
-- 18-character SSCC
+- The barcode field and SSCC field are treated as the same identifier
+- An 18-digit barcode is valid as the SSCC
 
-If the Excel contains an 18-character SSCC:
+If the Excel contains an 18-character barcode/SSCC:
 
 - Place it in positions 316–333
 - Leave pallet ID positions 13–21 blank unless specifically configured
 
-If the Excel contains only a 9-character pallet ID:
+If the Excel contains a 9-character value instead:
 
-- Place it in positions 13–21
+- Reject it as invalid for SSCC/barcode
 - Do not invent an SSCC
-- Show a warning that SSCC is blank
+- Show a warning that the barcode/SSCC is blank or invalid
 
-Validate that SSCC values:
+Validate that SSCC/barcode values:
 
 - Contain exactly 18 digits
 - Preserve leading zeroes
@@ -518,7 +197,7 @@ Nett mass:
 Pallet gross mass:
 - Width 10
 - Numeric format with three decimal positions
-- Example: 001409.000 when required by the target layout
+- Example: 1409.00 when required by the target layout
 
 Do not use locale-specific commas.
 
@@ -1018,7 +697,7 @@ Show:
 - Recent conversions
 - Recent errors
 
-Convert Excel page:
+File Converter page:
 
 Use Business Central FastTabs:
 

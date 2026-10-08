@@ -79,28 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      {
-        name: "description",
-        content:
-          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
-      },
+      { title: "Excel to PO" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      {
-        property: "og:description",
-        content:
-          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
-      },
+      { property: "og:title", content: "Excel to PO" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Excel to PO Conversion | Paltrack Transmission Utility" },
-      {
-        name: "twitter:description",
-        content:
-          "Convert pallet spreadsheets into Paltrack fixed-width PO transmission files with backend validation, record-length checks and .000 download.",
-      },
+      { name: "twitter:title", content: "Excel to PO" },
       {
         property: "og:image",
         content:
@@ -145,7 +130,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="top-right" />
     </QueryClientProvider>

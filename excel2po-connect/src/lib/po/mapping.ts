@@ -7,17 +7,15 @@ import {
 
 const SYNONYMS: Record<PalletFieldKey, string[]> = {
   palletId: [
-    "barcode",
     "pallet id",
     "palletid",
     "pallet no",
     "pallet number",
-    "sscc/barcode",
     "pallet_id",
     "combo pallet id",
     "combo_pallet_id",
   ],
-  sscc: ["sscc", "sscc18", "sscc code", "combo sscc", "combo_sscc"],
+  sscc: ["sscc", "barcode", "sscc18", "sscc code", "sscc/barcode", "combo sscc", "combo_sscc"],
   cartons: [
     "cartons",
     "carton qty",
@@ -214,19 +212,6 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
     "container_number",
     "container_no",
   ],
-  loadId: [
-    "load id",
-    "loadid",
-    "load number",
-    "load no",
-    "load_number",
-    "load_no",
-    "loadnum",
-    "load num",
-    "booking no",
-    "booking number",
-    "booking id",
-  ],
   loadReference: [
     "load reference",
     "load ref",
@@ -290,6 +275,11 @@ const HEADER_SYNONYMS: Partial<Record<keyof POHeaderInput, string[]>> = {
   ],
 };
 
+function normalizeOrganisationCode(value: string): string {
+  const normalized = value.trim().toUpperCase();
+  return normalized === "GJ" ? "GG" : normalized;
+}
+
 export function suggestHeaderValues(headers: string[], previewRows: Record<string, string>[]) {
   const suggested: Partial<POHeaderInput> = {};
   const norm = (value: string) =>
@@ -300,7 +290,6 @@ export function suggestHeaderValues(headers: string[], previewRows: Record<strin
       .trim();
 
   const HEADER_TOKEN_FALLBACK: Partial<Record<keyof POHeaderInput, string[]>> = {
-    loadId: ["load", "id"],
     loadReference: ["load", "ref"],
     locationCode: ["location"],
     sealNumber: ["seal"],
@@ -330,7 +319,10 @@ export function suggestHeaderValues(headers: string[], previewRows: Record<strin
       .map((row) => String(row[match] ?? "").trim())
       .find((text) => text.length > 0);
 
-    if (value) suggested[field] = value;
+    if (value) {
+      suggested[field] =
+        field === "organisationCode" ? normalizeOrganisationCode(value) : value;
+    }
   }
 
   return suggested;
@@ -349,7 +341,6 @@ export function suggestHeaderMappings(
       .trim();
 
   const HEADER_TOKEN_FALLBACK: Partial<Record<keyof POHeaderInput, string[]>> = {
-    loadId: ["load", "id"],
     loadReference: ["load", "ref"],
     locationCode: ["location"],
     sealNumber: ["seal"],
@@ -385,18 +376,8 @@ export function suggestHeaderMappings(
   return suggested;
 }
 
-export function resolveBackendMapping(headers: string[], mapping: ColumnMapping): ColumnMapping {
-  const effectiveMapping = { ...mapping };
-  const hardCodedHeader = "Barcode";
-  const matchingHeader = headers.find(
-    (header) => header.toLowerCase() === hardCodedHeader.toLowerCase(),
-  );
-
-  if (matchingHeader) {
-    effectiveMapping.palletId = matchingHeader;
-  }
-
-  return effectiveMapping;
+export function resolveBackendMapping(mapping: ColumnMapping): ColumnMapping {
+  return { ...mapping };
 }
 
 export function getMappingOptionLabel(header: string, fieldKey?: PalletFieldKey) {
@@ -413,7 +394,7 @@ export function applyMapping(
   headers: string[],
   firstDataRowNumber = 2,
 ) {
-  const resolvedMapping = resolveBackendMapping(headers, mapping);
+  const resolvedMapping = resolveBackendMapping(mapping);
 
   return rows.map((raw, index) => ({
     excelRow: firstDataRowNumber + index,
