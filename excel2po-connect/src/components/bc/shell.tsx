@@ -33,26 +33,31 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="inline-flex items-center justify-center rounded p-1 hover:bg-muted"
           aria-label="Toggle sidebar"
         >
-          {sidebarOpen ? (
-            <X className="h-4 w-4" />
-          ) : (
-            <Menu className="h-4 w-4" />
-          )}
+          {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
-        
+
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Excel2PO</span>
         </div>
 
         <div className="ml-auto flex items-center gap-1">
-          <button className="inline-flex items-center justify-center rounded p-2 hover:bg-muted" aria-label="Search">
+          <button
+            className="inline-flex items-center justify-center rounded p-2 hover:bg-muted"
+            aria-label="Search"
+          >
             <Search className="h-4 w-4" />
           </button>
-          <button className="inline-flex items-center justify-center rounded p-2 hover:bg-muted" aria-label="Notifications">
+          <button
+            className="inline-flex items-center justify-center rounded p-2 hover:bg-muted"
+            aria-label="Notifications"
+          >
             <Bell className="h-4 w-4" />
           </button>
-          <button className="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-muted" aria-label="User menu">
+          <button
+            className="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-muted"
+            aria-label="User menu"
+          >
             <User className="h-4 w-4" />
             <ChevronDown className="h-3 w-3" />
           </button>
@@ -85,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        
+
         <div className="border-t border-sidebar-border p-3">
           <p className="text-xs font-semibold text-sidebar-foreground/70">MATES PO</p>
           <p className="text-xs text-sidebar-foreground/60">v2.18</p>
@@ -227,7 +232,12 @@ export function PageHeader({
   title: string;
   subtitle?: string;
   count?: number;
-  actions?: { label: string; onClick: () => void; primary?: boolean; icon?: React.ComponentType<{ className?: string }> }[];
+  actions?: {
+    label: string;
+    onClick: () => void;
+    primary?: boolean;
+    icon?: React.ComponentType<{ className?: string }>;
+  }[];
 }) {
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-sm border border-border bg-card p-4">
@@ -328,11 +338,7 @@ export function ActivityTileGroup({
   );
 }
 
-export function Breadcrumb({
-  items,
-}: {
-  items: { label: string; href?: string }[];
-}) {
+export function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
   return (
     <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
       {items.map((item, idx) => (
@@ -397,9 +403,7 @@ export function DataTable({
                   onChange={(e) => {
                     if (onSelectedRowsChange) {
                       if (e.target.checked) {
-                        onSelectedRowsChange(
-                          new Set(data.map((row, idx) => String(idx)))
-                        );
+                        onSelectedRowsChange(new Set(data.map((row, idx) => String(idx))));
                       } else {
                         onSelectedRowsChange(new Set());
                       }
@@ -667,10 +671,7 @@ export function Alert({
           <p className="text-sm">{message}</p>
         </div>
         {onClose && (
-          <button
-            onClick={onClose}
-            className="text-sm font-medium opacity-70 hover:opacity-100"
-          >
+          <button onClick={onClose} className="text-sm font-medium opacity-70 hover:opacity-100">
             ×
           </button>
         )}
