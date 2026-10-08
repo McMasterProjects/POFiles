@@ -98,7 +98,7 @@ export function hydrateConversionRecords(records: Array<Partial<ConversionRecord
 export function pushLogs(entries: LogEntry[]) {
   void (async () => {
     try {
-      const res = await supaStore.pushLogs(entries as any[]);
+      const res = await supaStore.pushLogs(entries);
       if (!res) {
         store.logs.push(...entries);
         if (store.logs.length > 5000) store.logs.splice(0, store.logs.length - 5000);

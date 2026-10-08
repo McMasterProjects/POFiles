@@ -29,7 +29,7 @@ import {
 import { buildPODownloadSet, handleUpload, inferHeaderFromRows } from "../lib/po/service.server";
 import type { POHeaderInput } from "../lib/po/types";
 import { headerSchema } from "../lib/po/conversion.functions";
-import { hydrateConversionRecords, store } from "../lib/po/store.server";
+import { hydrateConversionRecords, store, type ConversionRecord } from "../lib/po/store.server";
 
 const header: POHeaderInput = {
   sourceAddress: "MTS",
@@ -88,7 +88,7 @@ describe("legacy PO report helpers", () => {
         excelRow: 4,
         values: { containerNumber: "C2", cartons: 15, palletQuantity: 4, grossMass: 80 },
       },
-    ] as any);
+    ] as Array<Record<string, unknown>>);
 
     expect(summary.groups.map((group) => group.container)).toEqual(["C1", "C2"]);
     expect(summary.groups[0].cartons).toBe(20);
@@ -269,24 +269,24 @@ describe("dashboard data normalization", () => {
       {
         id,
         uploadId: "UP-1",
-        status: null as any,
-        sourceFileName: null as any,
-        outputFileName: null as any,
+        status: null as unknown as string,
+        sourceFileName: null as unknown as string,
+        outputFileName: null as unknown as string,
         selectedSheet: "Sheet1",
-        totalRows: null as any,
-        validRows: null as any,
-        invalidRows: null as any,
-        warningCount: null as any,
-        recordCount: null as any,
-        palletCount: null as any,
-        cartonCount: null as any,
-        createdAt: null as any,
+        totalRows: null as unknown as number,
+        validRows: null as unknown as number,
+        invalidRows: null as unknown as number,
+        warningCount: null as unknown as number,
+        recordCount: null as unknown as number,
+        palletCount: null as unknown as number,
+        cartonCount: null as unknown as number,
+        createdAt: null as unknown as string,
         completedAt: null,
         content: "",
-        errors: null as any,
-        warnings: null as any,
-        header: null as any,
-        mapping: null as any,
+        errors: null as unknown as ConversionRecord["errors"],
+        warnings: null as unknown as ConversionRecord["warnings"],
+        header: null as unknown as POHeaderInput,
+        mapping: null as unknown as ConversionRecord["mapping"],
       },
     ]);
 
@@ -396,15 +396,16 @@ describe("header validation", () => {
 
 describe("record retention and export format", () => {
   it("accepts AO fixed-width transmissions and maps their OP rows", () => {
+    const aoHeader: POHeaderInput = { ...header, organisationCode: "AO" };
     const aoRecord = buildOPRecord(
       {
-        header: { ...header, organisationCode: "AO" } as any,
+        header: aoHeader,
         loadId: "002-000972",
         batchNumber: "000972",
         fileSequence: "001",
         transactionDate: "20260408",
         transactionTime: "09:22",
-      } as any,
+      },
       {
         excelRow: 2,
         values: { sscc: "1302936", cartons: 475, country: "ZA" },
@@ -425,7 +426,7 @@ describe("record retention and export format", () => {
   });
 
   it("hydrates conversion records so dashboard data is not lost on refresh", () => {
-    const snapshot = [
+    const snapshot: Array<Partial<ConversionRecord>> = [
       {
         id: "CNV-REFRESH-01",
         uploadId: "UPL-REFRESH-01",
@@ -445,12 +446,12 @@ describe("record retention and export format", () => {
         content: "PO DATA",
         errors: [],
         warnings: [],
-        header: {},
+        header: {} as POHeaderInput,
         mapping: {},
       },
     ];
 
-    hydrateConversionRecords(snapshot as any);
+    hydrateConversionRecords(snapshot);
 
     expect(store.conversions.get("CNV-REFRESH-01")?.content).toBe("PO DATA");
     expect(store.conversions.get("CNV-REFRESH-01")?.outputFileName).toBe("POMTS001.00");

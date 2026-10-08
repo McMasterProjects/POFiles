@@ -57,7 +57,9 @@ function Settings() {
         const stored = window.localStorage.getItem(KEY);
         const parsed = serverSettings ?? (stored ? JSON.parse(stored) : null);
         if (parsed) setSettings({ ...DEFAULTS, ...parsed });
-      } catch {}
+      } catch {
+        /* Ignore local persistence errors and keep default settings. */
+      }
     })();
   }, []);
 
@@ -149,7 +151,9 @@ function Settings() {
               try {
                 try {
                   window.localStorage.setItem(KEY, JSON.stringify(settings));
-                } catch {}
+                } catch {
+                  /* Ignore storage quota and browser policy issues; the server save is authoritative. */
+                }
                 await saveAppSettingsFn({ data: settings });
                 toast.success("Settings saved successfully");
               } catch {

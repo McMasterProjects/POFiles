@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { z } from "zod";
 import {
   handleUpload,
@@ -21,8 +22,8 @@ interface CustomError extends Error {
 }
 
 interface EventNode {
-  req: any;
-  res: any;
+  req: IncomingMessage;
+  res: ServerResponse;
 }
 
 interface ApiEvent {
@@ -102,8 +103,8 @@ async function readBody(event: ApiEvent): Promise<unknown> {
 
   return new Promise((resolve, reject) => {
     let raw = "";
-    request.on("data", (chunk: any) => {
-      raw += chunk.toString();
+    request.on("data", (chunk: Buffer | string) => {
+      raw += Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk;
     });
     request.on("end", () => {
       if (!raw) return resolve(undefined);

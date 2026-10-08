@@ -367,7 +367,7 @@ export function DataTable({
   onSelectedRowsChange,
 }: {
   columns: { key: string; header: string; width?: string }[];
-  data: Record<string, any>[];
+  data: Record<string, unknown>[];
   loading?: boolean;
   empty?: string;
   selectable?: boolean;
@@ -443,7 +443,7 @@ export function DataTable({
               )}
               {columns.map((col) => (
                 <td key={col.key} className="bc-table-cell">
-                  {row[col.key] ?? "-"}
+                  {String(row[col.key] ?? "-")}
                 </td>
               ))}
             </tr>

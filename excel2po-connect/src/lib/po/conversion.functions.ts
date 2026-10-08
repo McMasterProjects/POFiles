@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import type { ConversionRecord } from "./store.server";
 import type { AppSettingsState, ColumnMapping, JsonValue, POHeaderInput } from "./types";
 
 const trimToMax = (max: number) => z.string().trim().max(max);
@@ -155,7 +156,7 @@ export const listConversionsFn = createServerFn({
   const { hydrateConversionRecords, store } = await import("./store.server");
   const { loadConversions } = await import("./supabase-store.server");
 
-  const persisted = await loadConversions().catch(() => [] as any[]);
+  const persisted = await loadConversions().catch(() => [] as Partial<ConversionRecord>[]);
   if (persisted.length) {
     hydrateConversionRecords(persisted);
   }

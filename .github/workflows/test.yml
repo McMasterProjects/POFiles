@@ -1,13 +1,14 @@
-
 name: PO Converter - Automated Testing
 
 "on":
   push:
     branches:
       - develop
+
   pull_request:
     branches:
       - main
+
   workflow_dispatch:
 
 permissions:
@@ -16,7 +17,7 @@ permissions:
 jobs:
   test:
     name: Test PO Converter
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     defaults:
       run:
@@ -26,7 +27,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -39,8 +40,11 @@ jobs:
       - name: Run automated tests
         run: npm test
 
-      - name: Check code quality
+      - name: Run lint
         run: npm run lint
+
+      - name: Check TypeScript
+        run: npx tsc --noEmit
 
       - name: Build application
         run: npm run build

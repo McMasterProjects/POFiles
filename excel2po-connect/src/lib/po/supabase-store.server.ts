@@ -1,4 +1,5 @@
 import type { UploadRecord, ConversionRecord, MappingProfile } from "./store.server";
+import type { LogEntry } from "./types";
 import getSupabaseServiceClient from "../supabase.server";
 
 const schema = "po";
@@ -102,7 +103,7 @@ export async function loadConversions() {
   return (data ?? []) as ConversionRecord[];
 }
 
-export async function pushLogs(entries: any[]) {
+export async function pushLogs(entries: LogEntry[]) {
   const supabase = getSupabaseServiceClient();
   if (!supabase) return null;
   const rows = entries.map((e) => ({
